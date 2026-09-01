@@ -359,8 +359,7 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.schedulePrefetch()
 
 	case "/":
-		m.filtering = true
-		m.filter.Focus()
+		m.startFiltering()
 		return m, nil
 
 	case "esc", "backspace":

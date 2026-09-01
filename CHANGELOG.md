@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `hup tui --filter` starts the TUI in the combined cross-provider flat repo
+  list with the fuzzy filter already active, turning launch into an fzf-style
+  picker: type to narrow, Enter to act. It implies the flat view and composes
+  with `--mode multiplex` (type a repo, Enter clones-if-needed and switches).
+
 ## [1.2.0] - 2026-08-20
 
 ### Changed

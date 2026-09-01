@@ -618,6 +618,14 @@ func (m *Model) startFlat() {
 	m.offset = 0
 }
 
+// startFiltering activates the fuzzy filter input, focusing it so typing narrows
+// the current level's items. It backs both the `/` key and the --filter launch
+// option.
+func (m *Model) startFiltering() {
+	m.filtering = true
+	m.filter.Focus()
+}
+
 // providerRows returns the rows shown at the providers level: the fuzzy-filtered
 // provider names followed by the synthetic "All repositories" entry.
 func (m *Model) providerRows() []string {

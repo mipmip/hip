@@ -75,6 +75,7 @@ func runTUI(args []string) error {
 	fs := flag.NewFlagSet("tui", flag.ContinueOnError)
 	mode := fs.String("mode", "", "TUI mode (defaults to config default_mode)")
 	flatList := fs.Bool("flatlist", false, "start in the combined cross-provider flat repo list")
+	filter := fs.Bool("filter", false, "start with the fuzzy filter active in the flat repo list")
 	// args[0] is the subcommand name ("tui") or empty; parse the rest.
 	rest := args
 	if len(rest) > 0 {
@@ -87,7 +88,7 @@ func runTUI(args []string) error {
 	if err != nil {
 		return err
 	}
-	return tui.Run(cfg, *mode, *flatList)
+	return tui.Run(cfg, *mode, *flatList, *filter)
 }
 
 // runConfig handles the `config` subcommand: `path` and `check`.
