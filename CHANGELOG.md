@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-02
+
+### Added
+
+- Repository collections: hand-curated, named groups of repositories that span
+  owners, organizations and forges, stored in
+  `~/.config/huphop/collections.yaml` (insertion-ordered, hand-editable, and
+  rewritten atomically). Build one from the TUI — filter, then pick rows with
+  `tab`/`shift+tab` *while still typing* (`space` stays a filter-term
+  separator), review what you picked with the new `selected` facet (`x`) since
+  the position indicator now also reports the selection count, and press `A` to
+  add the selection to an existing collection or one created on the spot.
+  Browse collections from the `Collections` entry in the provider list: `d`
+  removes members, `R` renames, `d` deletes a collection behind a confirmation.
+  A member matching no cached repository is kept and shown dim as
+  `(unresolved)` rather than silently dropped. `hup tui --collection <name>`
+  opens one directly and composes with `--mode multiplex` and `--filter`, so a
+  collection doubles as a scoped tmux jump list.
+- The multiplex `switch_command` template gains `{{.Collection}}`, the active
+  collection's name (empty outside a collection), so one tmux session per
+  collection with one window per repository is expressible in config. The
+  clone-path template deliberately does not get it: a repo can belong to
+  several collections, and a path varying by collection would clone it twice.
+
 ## [1.3.0] - 2026-09-01
 
 ### Added
