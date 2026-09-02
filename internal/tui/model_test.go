@@ -59,7 +59,13 @@ func key(s string) tea.KeyMsg {
 	case "esc":
 		return tea.KeyMsg{Type: tea.KeyEsc}
 	case "space":
-		return tea.KeyMsg{Type: tea.KeySpace}
+		// Real terminals send a space as KeySpace carrying the rune, which is what
+		// the text input needs to insert it into the query.
+		return tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
+	case "tab":
+		return tea.KeyMsg{Type: tea.KeyTab}
+	case "shift+tab":
+		return tea.KeyMsg{Type: tea.KeyShiftTab}
 	case "backspace":
 		return tea.KeyMsg{Type: tea.KeyBackspace}
 	case "up":
@@ -131,12 +137,12 @@ func TestCursorMovementClamps(t *testing.T) {
 		t.Fatalf("expected cursor 1, got %d", m.cursor)
 	}
 	// move past end: clamps to the last row, which is the synthetic
-	// "All repositories" entry appended after the providers.
+	// "Collections" entry appended after the providers and "All repositories".
 	for i := 0; i < 10; i++ {
 		send(m, key("j"))
 	}
-	if m.cursor != len(m.providers) {
-		t.Fatalf("cursor should clamp to the all-repos entry, got %d", m.cursor)
+	if want := len(m.providers) + 1; m.cursor != want {
+		t.Fatalf("cursor should clamp to the collections entry (%d), got %d", want, m.cursor)
 	}
 }
 

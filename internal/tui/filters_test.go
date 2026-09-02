@@ -60,32 +60,32 @@ func TestFacetsMatchAndCompose(t *testing.T) {
 		t.Fatal("default facets should be inactive")
 	}
 	for _, r := range []provider.Repo{pubRepo, privFork, archived, unknownVis} {
-		if !f.match(r) {
+		if !f.match(r, false) {
 			t.Fatalf("inactive facets should match %s", r.Name)
 		}
 	}
 
 	// fork:hide drops the fork.
 	f = facets{fork: triHide}
-	if !f.active() || f.match(privFork) || !f.match(pubRepo) {
+	if !f.active() || f.match(privFork, false) || !f.match(pubRepo, false) {
 		t.Fatal("fork:hide predicate wrong")
 	}
 
 	// archived:only keeps only archived.
 	f = facets{archived: triOnly}
-	if f.match(pubRepo) || !f.match(archived) {
+	if f.match(pubRepo, false) || !f.match(archived, false) {
 		t.Fatal("archived:only predicate wrong")
 	}
 
 	// vis:public treats unknown/empty as public.
 	f = facets{vis: visPublic}
-	if !f.match(unknownVis) || f.match(privFork) {
+	if !f.match(unknownVis, false) || f.match(privFork, false) {
 		t.Fatal("vis:public normalization wrong")
 	}
 
 	// Compose: vis:private AND fork:only -> only privFork.
 	f = facets{vis: visPrivate, fork: triOnly}
-	if !f.match(privFork) || f.match(pubRepo) || f.match(archived) {
+	if !f.match(privFork, false) || f.match(pubRepo, false) || f.match(archived, false) {
 		t.Fatal("composed facet predicate wrong")
 	}
 }

@@ -29,6 +29,7 @@ CORE_PKGS=(
 	"github.com/mipmip/huphop/internal/provider"
 	"github.com/mipmip/huphop/internal/cache"
 	"github.com/mipmip/huphop/internal/syncer"
+	"github.com/mipmip/huphop/internal/collections"
 )
 
 echo "==> Running tests with coverage (profile: ${PROFILE})"

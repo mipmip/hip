@@ -45,11 +45,12 @@ func TestCombinedViewAggregatesAcrossProviders(t *testing.T) {
 	}
 }
 
-func TestCombinedProviderRowsHasAllEntryLast(t *testing.T) {
+func TestCombinedProviderRowsHasSyntheticEntriesLast(t *testing.T) {
 	m := combinedModel()
 	rows := m.providerRows()
-	if len(rows) != 3 || rows[len(rows)-1] != allReposLabel {
-		t.Fatalf("providerRows = %v, want providers then %q", rows, allReposLabel)
+	if len(rows) != 4 || rows[2] != allReposLabel || rows[3] != collectionsLabel {
+		t.Fatalf("providerRows = %v, want providers then %q then %q",
+			rows, allReposLabel, collectionsLabel)
 	}
 }
 

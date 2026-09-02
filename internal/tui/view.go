@@ -28,6 +28,14 @@ func (m *Model) View() string {
 		return m.cloneModalView()
 	}
 
+	if m.picker != nil {
+		return m.pickerView()
+	}
+
+	if m.prompt != nil {
+		return m.promptView()
+	}
+
 	if m.nav == levelDetail {
 		return m.detailView()
 	}
@@ -105,6 +113,13 @@ func (m *Model) cloneModalView() string {
 // headerText renders the breadcrumb / title for the current scope.
 func (m *Model) headerText() string {
 	crumb := "hup"
+	if m.nav == levelCollections {
+		return crumb + " > collections"
+	}
+	if m.selColl != "" {
+		return fmt.Sprintf("%s > collections > %s · %s", crumb, m.selColl,
+			plural(len(m.visibleRepos()), "repo", "repos"))
+	}
 	if m.flatAll {
 		return crumb + " > all repositories · " + m.combinedBadge()
 	}
@@ -136,6 +151,17 @@ func (m *Model) bodyText() string {
 			if !m.fetchedOwners[m.selProvider.Name][o] {
 				labels[i] += dimStyle.Render(" (not fetched)")
 			}
+		}
+		return m.renderStrings(labels)
+	case levelCollections:
+		rows := m.visibleCollections()
+		if m.coll == nil {
+			m.indicatorText = ""
+			return dimStyle.Render("(collections unavailable)")
+		}
+		labels := make([]string, len(rows))
+		for i, r := range rows {
+			labels[i] = r.Name + " " + dimStyle.Render(fmt.Sprintf("(%d)", r.Count))
 		}
 		return m.renderStrings(labels)
 	default:
@@ -180,7 +206,7 @@ func (m *Model) renderStrings(rows []string) string {
 		return dimStyle.Render("(nothing here)")
 	}
 	first, last := m.applyWindow(n)
-	m.indicatorText = indicator(first, last, n)
+	m.indicatorText = m.withSelectionCount(indicator(first, last, n))
 	var b strings.Builder
 	// i is the absolute row index so cursor highlighting tracks correctly.
 	for i := first; i < last; i++ {
@@ -207,7 +233,7 @@ func (m *Model) renderRepos(rows []repoItem) string {
 		return dimStyle.Render("(no repositories)")
 	}
 	first, last := m.applyWindow(n)
-	m.indicatorText = indicator(first, last, n)
+	m.indicatorText = m.withSelectionCount(indicator(first, last, n))
 	var b strings.Builder
 	// i is the absolute row index so cursor highlighting tracks correctly.
 	for i := first; i < last; i++ {
@@ -221,9 +247,16 @@ func (m *Model) renderRepos(rows []repoItem) string {
 			cloned = "*"
 		}
 		label := it.key()
-		if m.flatAll && it.Provider != nil {
-			// Disambiguate across providers in the combined view.
-			label = it.Provider.Short + "  " + label
+		if m.crossProviderScope() {
+			// Disambiguate across providers in the combined and collection views.
+			short := "??"
+			if it.Provider != nil {
+				short = it.Provider.Short
+			}
+			label = short + "  " + label
+		}
+		if it.Unresolved {
+			label += " (unresolved)"
 		}
 		var line string
 		if m.multiplexActive() {
@@ -236,9 +269,13 @@ func (m *Model) renderRepos(rows []repoItem) string {
 			}
 			line = fmt.Sprintf("%s %s %s", mark, cloned, label)
 		}
-		if i == m.cursor {
+		switch {
+		case i == m.cursor:
 			line = cursorStyle.Render(line)
-		} else if it.Selected {
+		case it.Unresolved:
+			// A member that matches no cached repository: kept, but visibly inert.
+			line = dimStyle.Render(line)
+		case it.Selected:
 			line = selectedStyle.Render(line)
 		}
 		b.WriteString(prefix + line + "\n")
@@ -250,6 +287,17 @@ func (m *Model) renderRepos(rows []repoItem) string {
 // [first, last) window over n rows.
 func indicator(first, last, n int) string {
 	return fmt.Sprintf("%d-%d of %d", first+1, last, n)
+}
+
+// withSelectionCount appends the size of the multi-selection to a position
+// indicator. The count is the total across all providers, not just the rows in
+// scope, so the full basket size stays visible while browsing a narrowed list.
+func (m *Model) withSelectionCount(s string) string {
+	n := len(m.selectedItems())
+	if n == 0 {
+		return s
+	}
+	return fmt.Sprintf("%s · %d selected", s, n)
 }
 
 // detailView renders the single-repository detail view: a metadata header
@@ -381,13 +429,22 @@ func (m *Model) detailFooterText() string {
 // footerText renders the keybinding help bar.
 func (m *Model) footerText() string {
 	if m.filtering {
-		return "enter: apply  esc: cancel filter"
+		return "enter: apply  tab: select  esc: cancel filter"
+	}
+	if m.nav == levelCollections {
+		return "up/down: move  enter: open  R: rename  d: delete  " +
+			"/: filter  esc: back  q: quit"
 	}
 	sortHelp := "s: sort  S: reverse"
 	if m.sortKey != sortNone {
 		sortHelp = fmt.Sprintf("s: sort [%s %s]  S: reverse", m.sortKey.label(), m.sortDir.label())
 	}
+	collHelp := "A: add to collection"
+	if m.selColl != "" {
+		collHelp += "  d: remove from collection"
+	}
 	return "up/down: move  pgup/pgdn ^u/^d: page  home/end: ends  " +
-		"enter: drill/details  /: filter  f/a/v: fork/archived/vis  " + sortHelp + "  space: select  " +
+		"enter: drill/details  /: filter  f/a/v: fork/archived/vis  x: selected  " + sortHelp +
+		"  space/tab: select  " + collHelp + "  " +
 		"c: clone  o: open  r: refresh  esc: back  q: quit"
 }

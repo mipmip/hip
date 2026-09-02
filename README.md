@@ -25,6 +25,75 @@ nix flake check        # build + tests
   clone; open in browser.
 - **CLI sync**: clone missing repos and fast-forward-pull existing ones;
   dirty-tree safe, cron-friendly.
+- **Collections**: hand-curated, named groups of repos that span owners,
+  organizations and forges.
 
 Configuration lives in `~/.config/huphop/config.yaml`; cached repo metadata in
 `~/.cache/huphop/`.
+
+## Collections
+
+A collection is a named group of repositories you assemble yourself — say the
+terraform modules you maintain across three organizations and two forges. It is
+a view, never storage: adding or removing members never touches a clone on disk.
+
+Build one from the TUI:
+
+| Key         | Where                | What it does                            |
+|-------------|----------------------|-----------------------------------------|
+| `/`         | repo list            | filter (fzf-style query)                |
+| `tab`       | repo list, filtering | select the row and move down            |
+| `shift+tab` | repo list, filtering | select the row and move up              |
+| `space`     | repo list            | select the row in place                 |
+| `x`         | repo list            | cycle the selection facet (see below)   |
+| `A`         | repo list            | add the selection to a collection       |
+| `d`         | inside a collection  | remove the selected/highlighted members |
+| `R`         | collections list     | rename a collection                     |
+| `d`         | collections list     | delete a collection (asks first)        |
+
+`space` is a term separator in the filter query, so selection has its own keys:
+`tab` and `shift+tab` work while you are still typing, and the query is left
+untouched. Selections live on the repository set rather than the visible list,
+so they survive re-filtering — narrow, pick, retype, pick again. Because the
+repos you picked scroll out of view as the query changes, `x` cycles a
+`selected` facet (`all` → `only` → `hide`) that shows just what is in your
+basket; the position indicator also reports how many are selected in total.
+
+`A` opens a picker listing the existing collections with their member counts,
+plus a `+ new collection` entry that asks for a name. Browse collections from
+the `Collections` entry in the provider list.
+
+Collections are stored in `~/.config/huphop/collections.yaml`, beside
+`config.yaml` but writable — the TUI edits it and rewrites it atomically:
+
+```yaml
+version: 1
+collections:
+  - name: terraform-modules
+    members:
+      - provider: github-mipmip   # the providers[].name key from config.yaml
+        owner: org1
+        repo: terraform-aws
+      - provider: codeberg-pim
+        owner: pim
+        repo: tf-modules-dns
+```
+
+Members are kept in the order you added them, and a member that matches no
+cached repository (renamed upstream, owner not fetched yet, provider renamed in
+`config.yaml`) is kept and shown dim as `(unresolved)` rather than being
+dropped.
+
+Launch straight into one:
+
+```bash
+hup tui --collection terraform-modules                  # scoped repo list
+hup tui --collection terraform-modules --mode multiplex --filter
+```
+
+The second form is the tmux jump list scoped to a collection: type, press Enter,
+and the repo is cloned if needed before the mode's `switch_command` runs.
+
+Not yet implemented: automatic collections computed from language or forge
+topics, and a Home Manager–style declared (read-only) layer beneath the
+writable file.

@@ -269,6 +269,16 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Add-to-collection modal: it owns every key while open.
+	if m.picker != nil {
+		return m.handlePickerKey(msg)
+	}
+
+	// Rename / delete-collection modal: likewise.
+	if m.prompt != nil {
+		return m.handlePromptKey(msg)
+	}
+
 	// Filter-input mode: capture typing; Enter/Esc leave the mode.
 	if m.filtering {
 		switch msg.Type {
@@ -300,6 +310,13 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case tea.KeyPgDown:
 			m.moveCursor(m.pageStep())
 			return m, nil
+		case tea.KeyTab:
+			// Pick while filtering: space is a query separator, so selection needs
+			// its own key. Intercepted before the input sees it, so the query and
+			// the scroll window are untouched.
+			return m.toggleSelectMove(1)
+		case tea.KeyShiftTab:
+			return m.toggleSelectMove(-1)
 		}
 		// Editing the query: feed the input, and reset the selection to the top
 		// only when the query text actually changes (navigation preserves it).
@@ -371,6 +388,12 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case " ":
 		return m.toggleSelect()
 
+	case "tab":
+		return m.toggleSelectMove(1)
+
+	case "shift+tab":
+		return m.toggleSelectMove(-1)
+
 	case "c":
 		return m.clone()
 
@@ -391,6 +414,27 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "v":
 		m.facets.vis = m.facets.vis.cycle()
 		return m.applyFacetChange()
+
+	case "x":
+		m.facets.selected = m.facets.selected.cycle()
+		return m.applyFacetChange()
+
+	case "A":
+		return m.addToCollection()
+
+	case "d":
+		// Level-dependent: drop members inside a collection, delete the
+		// collection itself at the collections level.
+		if m.nav == levelCollections {
+			return m.deleteCollection()
+		}
+		return m.removeFromCollection()
+
+	case "R":
+		if m.nav == levelCollections {
+			return m.renameCollection()
+		}
+		return m, nil
 
 	case "s":
 		m.sortKey = m.sortKey.cycle()
@@ -502,6 +546,14 @@ func (m *Model) goBack() (tea.Model, tea.Cmd) {
 		if m.fetchingOwner != "" {
 			m.cancelFetch()
 		}
+		if m.selColl != "" {
+			// A collection's repo list backs out to the collections level.
+			m.selColl = ""
+			m.nav = levelCollections
+			m.cursor = 0
+			m.offset = 0
+			break
+		}
 		if m.flatAll {
 			// Combined view backs out to the providers level.
 			m.flatAll = false
@@ -520,6 +572,10 @@ func (m *Model) goBack() (tea.Model, tea.Cmd) {
 		m.selProvider = nil
 		m.cursor = 0
 		m.offset = 0
+	case levelCollections:
+		m.nav = levelProviders
+		m.cursor = 0
+		m.offset = 0
 	}
 	m.clampCursor()
 	return m, nil
@@ -534,6 +590,17 @@ func (m *Model) enter() (tea.Model, tea.Cmd) {
 	case levelProviders:
 		rows := m.providerRows()
 		if m.cursor < 0 || m.cursor >= len(rows) {
+			return m, nil
+		}
+		if rows[m.cursor] == collectionsLabel {
+			// "Collections": enter the user-defined collections level.
+			m.selProvider = nil
+			m.selOwner = ""
+			m.nav = levelCollections
+			m.clearFilter()
+			m.cursor = 0
+			m.offset = 0
+			m.clampCursor()
 			return m, nil
 		}
 		if rows[m.cursor] == allReposLabel {
@@ -554,6 +621,18 @@ func (m *Model) enter() (tea.Model, tea.Cmd) {
 		m.cursor = 0
 		m.offset = 0
 		m.clampCursor()
+	case levelCollections:
+		row, ok := m.currentCollection()
+		if !ok {
+			return m, nil
+		}
+		m.selColl = row.Name
+		m.nav = levelRepos
+		m.clearFilter()
+		m.cursor = 0
+		m.offset = 0
+		m.clampCursor()
+		return m, nil
 	case levelOwners:
 		owners := m.visibleOwners()
 		if m.cursor >= 0 && m.cursor < len(owners) {
@@ -580,6 +659,10 @@ func (m *Model) enter() (tea.Model, tea.Cmd) {
 func (m *Model) multiplexActivate(sw string) (tea.Model, tea.Cmd) {
 	it, ok := m.currentRepo()
 	if !ok {
+		return m, nil
+	}
+	if it.Unresolved {
+		m.status = unresolvedStatus(it)
 		return m, nil
 	}
 	if it.Cloned {
@@ -647,6 +730,10 @@ func (m *Model) openDetail() (tea.Model, tea.Cmd) {
 	if !ok {
 		return m, nil
 	}
+	if it.Unresolved {
+		m.status = unresolvedStatus(it)
+		return m, nil
+	}
 
 	// Remember the repo-list position so Esc restores it.
 	m.detailReturnCursor = m.cursor
@@ -699,7 +786,7 @@ func (m *Model) handlePrefetchTick(msg prefetchTickMsg) (tea.Model, tea.Cmd) {
 		return m, nil // cursor moved again, or not applicable
 	}
 	it, ok := m.currentRepo()
-	if !ok {
+	if !ok || it.Unresolved || it.Provider == nil {
 		return m, nil
 	}
 	if _, cached, err := cache.LoadDetailsOrEmpty(it.Provider.Name, it.Repo.Owner, it.Repo.Name); err == nil && cached {
@@ -773,6 +860,10 @@ func (m *Model) cloneDetail() (tea.Model, tea.Cmd) {
 // openDetailRepo opens the detail-view repo's web URL in the browser.
 func (m *Model) openDetailRepo() (tea.Model, tea.Cmd) {
 	it := m.detailRepo
+	if it.Unresolved {
+		m.status = unresolvedStatus(it)
+		return m, nil
+	}
 	if it.Repo.WebURL == "" {
 		m.status = fmt.Sprintf("%s has no web URL", it.key())
 		return m, nil
@@ -794,16 +885,28 @@ func (m *Model) refreshDetail() (tea.Model, tea.Cmd) {
 	return m, m.detailFetcher(context.Background(), it.Provider, it.Repo)
 }
 
-// toggleSelect flips the multi-select flag on the highlighted repo. It is inert
-// in multiplex mode, where the primary action operates on a single repository.
-func (m *Model) toggleSelect() (tea.Model, tea.Cmd) {
+// toggleSelect flips the multi-select flag on the highlighted repo, leaving the
+// cursor where it is. It is the space-key behavior.
+func (m *Model) toggleSelect() (tea.Model, tea.Cmd) { return m.toggleSelectMove(0) }
+
+// toggleSelectMove flips the multi-select flag on the highlighted repo and then
+// moves the cursor by delta: 0 for space (toggle in place), +1 for Tab and -1
+// for shift+Tab, which mirror `fzf --multi` so a selection can be built while
+// the filter input is focused. The flag is written to the backing repository set
+// (not the filtered view), so selections survive re-filtering, facet changes,
+// sorting and navigation.
+//
+// It is inert in multiplex mode, where the primary action operates on a single
+// repository, and at the provider/owner levels, where there is no repo to select.
+func (m *Model) toggleSelectMove(delta int) (tea.Model, tea.Cmd) {
 	if m.multiplexActive() {
 		return m, nil
 	}
 	it, ok := m.currentRepo()
-	if !ok {
+	if !ok || it.Unresolved || it.Provider == nil {
 		return m, nil
 	}
+	before := m.rowCount()
 	items := m.reposByProvider[it.Provider.Name]
 	for i := range items {
 		if items[i].key() == it.key() {
@@ -811,6 +914,14 @@ func (m *Model) toggleSelect() (tea.Model, tea.Cmd) {
 			break
 		}
 	}
+	// When the selected facet is narrowing the list, un-picking a row removes it
+	// and the following row slides into the cursor position, so advancing would
+	// skip an entry.
+	if m.rowCount() < before {
+		m.clampCursor()
+		return m, nil
+	}
+	m.moveCursor(delta)
 	return m, nil
 }
 
@@ -822,6 +933,10 @@ func (m *Model) clone() (tea.Model, tea.Cmd) {
 	}
 	it, ok := m.currentRepo()
 	if !ok {
+		return m, nil
+	}
+	if it.Unresolved {
+		m.status = unresolvedStatus(it)
 		return m, nil
 	}
 	if it.Cloned {
@@ -836,6 +951,10 @@ func (m *Model) clone() (tea.Model, tea.Cmd) {
 func (m *Model) open() (tea.Model, tea.Cmd) {
 	it, ok := m.currentRepo()
 	if !ok {
+		return m, nil
+	}
+	if it.Unresolved {
+		m.status = unresolvedStatus(it)
 		return m, nil
 	}
 	if it.Repo.WebURL == "" {

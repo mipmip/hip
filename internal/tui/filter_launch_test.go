@@ -9,7 +9,7 @@ import (
 // combined flat repo list with the fuzzy filter active and focused.
 func TestFilterLaunchStartsFlatFiltering(t *testing.T) {
 	m, _ := newTestModel(t)
-	if err := m.applyLaunchOptions("", false, true); err != nil {
+	if err := m.applyLaunchOptions("", "", false, true); err != nil {
 		t.Fatalf("applyLaunchOptions: %v", err)
 	}
 	if !m.flatAll || m.nav != levelRepos {
@@ -25,7 +25,7 @@ func TestFilterLaunchStartsFlatFiltering(t *testing.T) {
 // --flatlist (the fuzzy filter only searches repositories at the repos level).
 func TestFilterLaunchImpliesFlat(t *testing.T) {
 	m, _ := newTestModel(t)
-	if err := m.applyLaunchOptions("", false, true); err != nil {
+	if err := m.applyLaunchOptions("", "", false, true); err != nil {
 		t.Fatalf("applyLaunchOptions: %v", err)
 	}
 	if !m.flatAll || m.nav != levelRepos || m.selProvider != nil {
@@ -40,7 +40,7 @@ func TestFilterLaunchImpliesFlat(t *testing.T) {
 func TestFilterLaunchComposesWithMultiplex(t *testing.T) {
 	m := modeModel(t, "echo {{.Repo}}", false, func([]string) error { return nil }, &recordCloner{})
 	m.nav = levelProviders // simulate a fresh launch before options are applied
-	if err := m.applyLaunchOptions("multiplex", false, true); err != nil {
+	if err := m.applyLaunchOptions("multiplex", "", false, true); err != nil {
 		t.Fatalf("applyLaunchOptions: %v", err)
 	}
 	if !m.filtering || !m.flatAll || m.nav != levelRepos {
@@ -60,7 +60,7 @@ func TestFilterLaunchComposesWithMultiplex(t *testing.T) {
 // flat view out to the provider level.
 func TestFilterLaunchEscUnwind(t *testing.T) {
 	m, _ := newTestModel(t)
-	if err := m.applyLaunchOptions("", false, true); err != nil {
+	if err := m.applyLaunchOptions("", "", false, true); err != nil {
 		t.Fatalf("applyLaunchOptions: %v", err)
 	}
 	send(m, key("m")) // type into the filter
@@ -91,7 +91,7 @@ func TestFilterLaunchEnterSwitchesInMultiplex(t *testing.T) {
 	var ran []string
 	m := modeModel(t, "echo {{.Repo}}", true, func(argv []string) error { ran = argv; return nil }, &recordCloner{})
 	m.nav = levelProviders
-	if err := m.applyLaunchOptions("multiplex", false, true); err != nil {
+	if err := m.applyLaunchOptions("multiplex", "", false, true); err != nil {
 		t.Fatalf("applyLaunchOptions: %v", err)
 	}
 	// Enter while filtering leaves edit mode then acts on the highlighted repo.

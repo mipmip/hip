@@ -20,6 +20,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/mipmip/huphop/internal/cache"
+	"github.com/mipmip/huphop/internal/collections"
 	"github.com/mipmip/huphop/internal/config"
 	"github.com/mipmip/huphop/internal/fetch"
 	"github.com/mipmip/huphop/internal/provider"
@@ -78,10 +79,11 @@ func (d sortDir) label() string {
 type level int
 
 const (
-	levelProviders level = iota // list of configured providers
-	levelOwners                 // owners within the selected provider
-	levelRepos                  // repos within the selected owner
-	levelDetail                 // single-repo detail view (metadata + README)
+	levelProviders   level = iota // list of configured providers
+	levelOwners                   // owners within the selected provider
+	levelRepos                    // repos within the selected owner
+	levelDetail                   // single-repo detail view (metadata + README)
+	levelCollections              // list of user-defined collections
 )
 
 // repoItem is a repository plus its resolved display/clone state.
@@ -94,6 +96,11 @@ type repoItem struct {
 	Cloned bool
 	// Selected reports whether the row is multi-selected for bulk clone.
 	Selected bool
+	// Unresolved marks a collection member that matches no cached repository
+	// (renamed upstream, owner not fetched, or provider no longer configured).
+	// Such a row is display-only: it can be removed from the collection but not
+	// selected, cloned or opened.
+	Unresolved bool
 }
 
 // key returns the "owner/name" key used for display and fuzzy matching.
@@ -158,6 +165,20 @@ type Model struct {
 	// selProvider / selOwner track the drilled-down selection.
 	selProvider *config.Provider
 	selOwner    string
+
+	// coll is the loaded user-defined collection store; nil when collections.yaml
+	// could not be read (collErr then says why, and every collection action
+	// refuses rather than overwriting a file the user may want to repair).
+	coll     *collections.Store
+	collErr  error
+	collPath string
+	// selColl is the collection whose members are listed at the repos level ("" =
+	// not browsing a collection).
+	selColl string
+	// picker holds the add-to-collection modal state; nil when it is closed.
+	picker *collPicker
+	// prompt holds the rename / delete-collection modal state; nil when closed.
+	prompt *collPrompt
 
 	// cursor is the highlighted row index into the currently visible list.
 	cursor int
@@ -292,7 +313,26 @@ func New(cfg *config.Config) *Model {
 	m.detailFetcher = defaultDetailFetcher(cfg)
 
 	m.loadCaches()
+	m.loadCollections()
 	return m
+}
+
+// loadCollections reads the collection store from the config directory. A
+// missing file is normal (an empty store); a malformed one is remembered as an
+// error so collection actions can report it instead of overwriting the file.
+func (m *Model) loadCollections() {
+	path, err := collections.DefaultPath()
+	if err != nil {
+		m.collErr = err
+		return
+	}
+	m.collPath = path
+	st, err := collections.Load(path)
+	if err != nil {
+		m.collErr = err
+		return
+	}
+	m.coll = st
 }
 
 // loadCaches (re)loads all provider caches into reposByProvider.
@@ -526,6 +566,8 @@ func (m *Model) visibleRepos() []repoItem {
 
 	var scope []repoItem
 	switch {
+	case m.selColl != "" && m.coll != nil:
+		scope = m.collectionScope(m.selColl)
 	case m.selOwner != "" && m.selProvider != nil:
 		for _, it := range m.reposByProvider[m.selProvider.Name] {
 			if it.Repo.Owner == m.selOwner {
@@ -545,7 +587,7 @@ func (m *Model) visibleRepos() []repoItem {
 	if m.facets.active() {
 		narrowed := scope[:0:0]
 		for _, it := range scope {
-			if m.facets.match(it.Repo) {
+			if m.facets.match(it.Repo, it.Selected) {
 				narrowed = append(narrowed, it)
 			}
 		}
@@ -557,7 +599,7 @@ func (m *Model) visibleRepos() []repoItem {
 		out := scope[:0:0]
 		for _, it := range scope {
 			match := it.key()
-			if m.flatAll && it.Provider != nil {
+			if m.crossProviderScope() && it.Provider != nil {
 				// Let the provider short participate in matching so users can
 				// filter the combined list by provider (e.g. "gh").
 				match = it.Provider.Short + " " + match
@@ -603,6 +645,10 @@ func (m *Model) sortRepos(items []repoItem) []repoItem {
 	return items
 }
 
+// collectionsLabel is the synthetic providers-level entry that opens the
+// user-defined collections level.
+const collectionsLabel = "Collections"
+
 // allReposLabel is the synthetic top-of-providers entry that opens the combined
 // cross-provider flat repository view.
 const allReposLabel = "All repositories"
@@ -632,9 +678,78 @@ func (m *Model) providerRows() []string {
 	provs := m.visibleProviders()
 	rows := make([]string, 0, len(provs)+1)
 	rows = append(rows, provs...)
-	rows = append(rows, allReposLabel)
+	rows = append(rows, allReposLabel, collectionsLabel)
 	return rows
 }
+
+// collectionRow is one row of the collections level: a name and its member count.
+type collectionRow struct {
+	Name  string
+	Count int
+}
+
+// visibleCollections returns the collections at the collections level, narrowed
+// by the fuzzy query (which matches collection names at this level).
+func (m *Model) visibleCollections() []collectionRow {
+	if m.coll == nil {
+		return nil
+	}
+	rows := make([]collectionRow, 0, len(m.coll.Collections))
+	for _, c := range m.coll.Collections {
+		rows = append(rows, collectionRow{Name: c.Name, Count: len(c.Members)})
+	}
+	return filtered(rows, m.searchMatcher(m.filter.Value()), func(r collectionRow) string { return r.Name })
+}
+
+// currentCollection returns the highlighted collection at the collections level.
+func (m *Model) currentCollection() (collectionRow, bool) {
+	if m.nav != levelCollections {
+		return collectionRow{}, false
+	}
+	rows := m.visibleCollections()
+	if m.cursor < 0 || m.cursor >= len(rows) {
+		return collectionRow{}, false
+	}
+	return rows[m.cursor], true
+}
+
+// collectionScope resolves a collection's members to repo items, in stored
+// order. A member with no cached repository yields an Unresolved placeholder so
+// a curated list never silently loses entries.
+func (m *Model) collectionScope(name string) []repoItem {
+	c, ok := m.coll.Get(name)
+	if !ok {
+		return nil
+	}
+	out := make([]repoItem, 0, len(c.Members))
+	for _, mem := range c.Members {
+		if it, ok := m.findRepoItem(mem); ok {
+			out = append(out, it)
+			continue
+		}
+		out = append(out, repoItem{
+			Repo:       provider.Repo{Owner: mem.Owner, Name: mem.Repo},
+			Provider:   m.providerByName(mem.Provider),
+			Unresolved: true,
+		})
+	}
+	return out
+}
+
+// findRepoItem locates a collection member among the cached repo items.
+func (m *Model) findRepoItem(mem collections.Member) (repoItem, bool) {
+	for _, it := range m.reposByProvider[mem.Provider] {
+		if strings.EqualFold(it.Repo.Owner, mem.Owner) && strings.EqualFold(it.Repo.Name, mem.Repo) {
+			return it, true
+		}
+	}
+	return repoItem{}, false
+}
+
+// crossProviderScope reports whether the repo list currently mixes providers
+// (the combined view or a collection), so rows and fuzzy matching include the
+// provider short.
+func (m *Model) crossProviderScope() bool { return m.flatAll || m.selColl != "" }
 
 // combinedBadge summarizes the combined view: total cached repos and how many
 // owners are loaded out of the total known owners across all providers.
@@ -671,6 +786,8 @@ func (m *Model) rowCount() int {
 		return len(m.providerRows())
 	case levelOwners:
 		return len(m.visibleOwners())
+	case levelCollections:
+		return len(m.visibleCollections())
 	default:
 		return len(m.visibleRepos())
 	}

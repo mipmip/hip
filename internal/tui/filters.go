@@ -4,7 +4,8 @@ package tui
 // predicate. Facets narrow the currently cached repositories (Model A,
 // narrow-only) and compose (AND) with the fuzzy query. State is in-memory for
 // the session and starts at "all" so behavior is unchanged until a facet is
-// touched.
+// touched. The fork, archived and selected facets are tri-state; visibility is
+// a value cycle.
 
 import (
 	"strings"
@@ -95,18 +96,26 @@ type facets struct {
 	fork     triState
 	archived triState
 	vis      visFacet
+	// selected is the "basket" facet: it narrows the list to the current
+	// multi-selection, so repositories picked under several different queries can
+	// be reviewed together once those queries are gone.
+	selected triState
 }
 
 // active reports whether any facet is set away from "all".
 func (f facets) active() bool {
-	return f.fork != triAll || f.archived != triAll || f.vis != visAll
+	return f.fork != triAll || f.archived != triAll || f.vis != visAll ||
+		f.selected != triAll
 }
 
-// match reports whether a repo passes every active facet (AND).
-func (f facets) match(r provider.Repo) bool {
+// match reports whether a repo passes every active facet (AND). The selection
+// flag is passed separately because it lives on the repo item (session state),
+// not on the provider's repository metadata.
+func (f facets) match(r provider.Repo, selected bool) bool {
 	return f.fork.match(r.Fork) &&
 		f.archived.match(r.Archived) &&
-		f.vis.match(provider.NormalizeVisibility(r.Visibility))
+		f.vis.match(provider.NormalizeVisibility(r.Visibility)) &&
+		f.selected.match(selected)
 }
 
 // status renders the active facets for the status line, e.g. "fork:hide
@@ -121,6 +130,9 @@ func (f facets) status() string {
 	}
 	if f.vis != visAll {
 		parts = append(parts, "vis:"+f.vis.label())
+	}
+	if f.selected != triAll {
+		parts = append(parts, "selected:"+f.selected.label())
 	}
 	return strings.Join(parts, " ")
 }
