@@ -1,10 +1,11 @@
 ---
 # skull2-u63k
 title: expose active collection in multiplex switch_command
-status: todo
+status: completed
 type: feature
+priority: normal
 created_at: 2026-09-02T15:58:43Z
-updated_at: 2026-09-02T15:58:43Z
+updated_at: 2026-09-02T16:50:43Z
 parent: skull2-ok4c
 ---
 
@@ -54,3 +55,22 @@ Captured as `2026-09-02-collection-in-switch-command`
 template context. Validated. Depends on `2026-09-02-add-repo-collections`
 (introduces `m.selColl`) — ship after it:
 `/ship 2026-09-02-collection-in-switch-command`.
+
+
+## Summary of Changes
+
+Shipped as `2026-09-02-collection-in-switch-command`. `switchData` gained a
+`Collection` field populated from `m.selColl`, so a multiplex `switch_command`
+can name a tmux session after the active collection while each repo gets a
+window. It works for both routes into a collection (`--collection` and in-app
+navigation), and renders empty outside one — no fallback is invented; the
+documented form is
+`{{if .Collection}}{{.Collection}}{{else}}{{.Short}}->{{.OwnerLower}}{{end}}`.
+
+Deliberately NOT added to `clonepath.Data`: a repo can belong to several
+collections, and a clone path varying by collection would clone it twice and
+leave `sync` without a canonical copy. Tests cover rendering inside a
+collection, the empty case, both branches of the conditional, a collection name
+with a space and a `;` surviving `splitArgs` as one literal argument, and the
+end-to-end multiplex activation asserting the produced argv. README documents
+the session-per-collection example.
