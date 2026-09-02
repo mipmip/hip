@@ -90,17 +90,28 @@ func splitArgs(s string) ([]string, error) {
 }
 
 // switchData is the template context for a mode's switch_command: the clone-path
-// fields plus the resolved local Target path.
+// fields plus the resolved local Target path and the active Collection.
 type switchData struct {
 	clonepath.Data
 	Target string
+	// Collection is the name of the collection whose repository list is active,
+	// and "" wherever no collection scopes the list (the combined view or an
+	// owner drill-down) — no substitute is invented, so a configuration that
+	// wants another name there uses a template conditional.
+	//
+	// It lives here and deliberately NOT on clonepath.Data: a repository can
+	// belong to several collections, and a clone path that varied by collection
+	// would clone the same repository twice and leave sync without a canonical
+	// copy. Navigation context must not reach the on-disk layout.
+	Collection string
 }
 
 // renderSwitchCommand renders a switch_command template for a repo item.
 func (m *Model) renderSwitchCommand(tpl string, it repoItem) (string, error) {
 	data := switchData{
-		Data:   clonepath.NewData(m.cfg.BaseDir, it.Provider, it.Provider.WebURL, it.Repo.Owner, it.Repo.Name),
-		Target: it.Target,
+		Data:       clonepath.NewData(m.cfg.BaseDir, it.Provider, it.Provider.WebURL, it.Repo.Owner, it.Repo.Name),
+		Target:     it.Target,
+		Collection: m.selColl,
 	}
 	t, err := template.New("switch").Option("missingkey=error").Parse(tpl)
 	if err != nil {

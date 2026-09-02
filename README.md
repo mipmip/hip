@@ -94,6 +94,29 @@ hup tui --collection terraform-modules --mode multiplex --filter
 The second form is the tmux jump list scoped to a collection: type, press Enter,
 and the repo is cloned if needed before the mode's `switch_command` runs.
 
+The active collection is available to that command as `{{.Collection}}`, so a
+collection can name its own tmux session while each repo gets a window:
+
+```yaml
+modes:
+  multiplex:
+    switch_command: >-
+      tmux-helper open-or-new-session-with-name="{{.Collection}}"
+      open-or-new-window-with-name="{{.Repo}}" layout-template="3-pane-coding"
+```
+
+Outside a collection — the combined view, or an owner drill-down —
+`{{.Collection}}` is empty; no substitute is invented for you. If the same
+keybinding should also work there, say so in the template:
+
+```yaml
+      open-or-new-session-with-name="{{if .Collection}}{{.Collection}}{{else}}{{.Short}}->{{.OwnerLower}}{{end}}"
+```
+
+The clone-path template deliberately does *not* get `{{.Collection}}`: a repo can
+belong to several collections, and a path that varied by collection would clone
+it twice and leave `sync` without a canonical copy.
+
 Not yet implemented: automatic collections computed from language or forge
 topics, and a Home Manager–style declared (read-only) layer beneath the
 writable file.

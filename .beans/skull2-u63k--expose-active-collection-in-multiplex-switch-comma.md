@@ -42,9 +42,9 @@ everything missing first).
 
 ## Checklist
 
-- [ ] `Collection` field on `switchData`, populated from `m.selColl`
-- [ ] tests: inside a collection, outside (empty + conditional), space in the name
-- [ ] README: session-per-collection example + conditional fallback
+- [x] `Collection` field on `switchData`, populated from `m.selColl`
+- [x] tests: inside a collection, outside (empty + conditional), space in the name
+- [x] README: session-per-collection example + conditional fallback
 
 ## OpenSpec change
 
