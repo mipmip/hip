@@ -2,15 +2,17 @@
 
 ## Purpose
 TBD - created by archiving change add-config-loading. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Load configuration from the default location
 
-The system SHALL load configuration from `~/.config/huphop/config.yaml`,
+The system SHALL load configuration from `~/.config/hip/config.yaml`,
 parsing it into typed global and per-provider settings.
 
 #### Scenario: Valid config file is loaded
 
-- **WHEN** `~/.config/huphop/config.yaml` exists and is valid YAML matching
+- **WHEN** `~/.config/hip/config.yaml` exists and is valid YAML matching
   the schema
 - **THEN** the system returns a typed configuration containing `base_dir`, the
   clone-path template, and the list of providers with their settings
@@ -240,4 +242,3 @@ preserving prior behavior.
 - **WHEN** `search_strategy` is set to a value other than `fuzzy` or `substring`
 - **THEN** validation fails with a clear message naming the offending value and
   the allowed values
-

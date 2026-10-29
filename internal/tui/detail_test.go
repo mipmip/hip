@@ -9,9 +9,9 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/mipmip/huphop/internal/cache"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/cache"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // newDetailTestModel builds a model at the repos level with one repo and an

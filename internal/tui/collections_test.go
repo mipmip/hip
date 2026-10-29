@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/collections"
-	"github.com/mipmip/huphop/internal/config"
+	"github.com/mipmip/hip/internal/collections"
+	"github.com/mipmip/hip/internal/config"
 )
 
 // attachStore gives a model an empty collection store in a temp dir and returns
@@ -572,10 +572,10 @@ func TestCollectionFooterMentionsRemove(t *testing.T) {
 func TestLoadCollectionsFromConfigDir(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
-	if err := os.MkdirAll(filepath.Join(dir, "huphop"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "hip"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "huphop", "collections.yaml")
+	path := filepath.Join(dir, "hip", "collections.yaml")
 	if err := os.WriteFile(path, []byte("version: 1\ncollections:\n  - name: tf\n    members: []\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# release.sh — interactive, gated release for huphop.
+# release.sh — interactive, gated release for hip.
 #
 # Flow:
 #   1. Safety checks: clean working tree, on `main`, CHANGELOG has an
@@ -160,4 +160,4 @@ git tag "${TAG}" "${REL_COMMIT}"
 git push origin "${TAG}"
 
 info "Done. Tag ${TAG} pushed; GitHub Actions will build and publish the release."
-info "Watch: https://github.com/mipmip/huphop/actions"
+info "Watch: https://github.com/mipmip/hip/actions"

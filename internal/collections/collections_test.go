@@ -18,7 +18,7 @@ func TestDefaultPathUsesXDGThenHome(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultPath: %v", err)
 	}
-	if want := filepath.Join("/tmp/xdg", "huphop", "collections.yaml"); got != want {
+	if want := filepath.Join("/tmp/xdg", "hip", "collections.yaml"); got != want {
 		t.Fatalf("DefaultPath with XDG = %q, want %q", got, want)
 	}
 
@@ -31,7 +31,7 @@ func TestDefaultPathUsesXDGThenHome(t *testing.T) {
 	if err != nil {
 		t.Skipf("no home directory: %v", err)
 	}
-	if want := filepath.Join(home, ".config", "huphop", "collections.yaml"); got != want {
+	if want := filepath.Join(home, ".config", "hip", "collections.yaml"); got != want {
 		t.Fatalf("DefaultPath without XDG = %q, want %q", got, want)
 	}
 }

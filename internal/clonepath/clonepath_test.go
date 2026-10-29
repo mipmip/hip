@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/config"
+	"github.com/mipmip/hip/internal/config"
 )
 
 func TestRenderDefaultTemplate(t *testing.T) {

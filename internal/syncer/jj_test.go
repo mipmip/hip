@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 func TestParseJJProgress(t *testing.T) {

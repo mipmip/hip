@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Release as 2.0.0: this release breaks existing configuration and environment.
+
+### Changed
+
+- **BREAKING** Renamed the project HupHop → **HIP** ("Hub Is Plural"), binary
+  `hup` → `hip`. Module `github.com/mipmip/hip`, config `~/.config/hip`, cache
+  `~/.cache/hip`, auth env prefix `HIP_<PROVIDER>_TOKEN`. The old names are not
+  read anymore.
+
+### Migration
+
+```bash
+mv ~/.config/huphop ~/.config/hip
+rm -rf ~/.cache/huphop                  # optional; hip refresh rebuilds it
+```
+
+- Rename `HUPHOP_<PROVIDER>_TOKEN` to `HIP_<PROVIDER>_TOKEN` in your shell
+  profile, cron environment and any `auth.env` entries in `config.yaml`.
+- Replace `hup` with `hip` in cron entries, aliases and scripts.
+
 ## [1.4.0] - 2026-09-02
 
 ### Added
@@ -14,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Repository collections: hand-curated, named groups of repositories that span
   owners, organizations and forges, stored in
   `~/.config/huphop/collections.yaml` (insertion-ordered, hand-editable, and
-  rewritten atomically). Build one from the TUI — filter, then pick rows with
+  rewritten atomically). Build one from the TUI: filter, then pick rows with
   `tab`/`shift+tab` *while still typing* (`space` stays a filter-term
   separator), review what you picked with the new `selected` facet (`x`) since
   the position indicator now also reports the selection count, and press `A` to
@@ -47,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TUI filter now understands fzf-style extended search: `'exact`, `^prefix`,
   `suffix$`, `!negate`, space for AND, and `a | b` for OR. The new
   `search_strategy` config key (`fuzzy` default, or `substring`) sets what a
-  bare term means, and a `'` prefix toggles a term to the opposite — so
+  bare term means, and a `'` prefix toggles a term to the opposite, so
   searching `nivis` in `substring` mode returns only literal matches.
 
 ## [1.1.0] - 2026-08-20
@@ -60,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `header`/`footer` element slots (repo list stays the body); pick one with
   `hup tui --mode <name>`. New `multiplex` mode strips the chrome and, on
   selecting a repo, clones it if needed then runs a templated, shell-safe
-  `switch_command` (clone-path fields plus `{{.Target}}`) — e.g. jump to a tmux
+  `switch_command` (clone-path fields plus `{{.Target}}`), e.g. jump to a tmux
   session at the checkout.
 - `hup tui --flatlist` starts directly in the combined flat repo list; combine
   with `--mode multiplex` to fuzzy-find any repo and jump to it in one command.
@@ -79,7 +99,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   progress popup with a real progress bar (cancel with Esc).
 - **BREAKING**: `username` is now required for every provider in `config.yaml`
   (`hup config check` reports it if missing). Your own account is an ordinary
-  owner named by `username` — pinned first and tinted in the TUI owner list —
+  owner named by `username` (pinned first and tinted in the TUI owner list)
   and an empty `owners` list resolves to it. The `self` token in
   `exclude_owners` is gone; exclude your own account by listing your `username`.
 - `config.example.yaml` comments normalized to copy-pasteable `# key: value`

@@ -8,9 +8,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mipmip/huphop/internal/clonepath"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/clonepath"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // Action is the outcome recorded for a single repository.

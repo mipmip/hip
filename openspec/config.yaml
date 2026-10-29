@@ -4,18 +4,18 @@ schema: spec-driven
 # This is shown to AI when creating artifacts.
 # Full briefing lives in BRIEFING.md; this is the condensed version.
 context: |
-  HupHop — multi-provider git portfolio manager (PoC / alpha base).
+  HIP — multi-provider git portfolio manager (PoC / alpha base).
   Controls a large portfolio of git repos across providers, giving a
   uniform on-disk layout, a TUI to browse/clone, and a cron-friendly
   CLI to sync backups. Full briefing: BRIEFING.md.
 
   Providers: GitHub (gh), Codeberg/Forgejo (cb), GitLab (gl).
   Auth: reuse gh/glab CLIs; PAT via env var fallback for CLI/cron;
-  Codeberg is env-PAT first (HUPHOP_<PROVIDER>_TOKEN).
+  Codeberg is env-PAT first (HIP_<PROVIDER>_TOKEN).
 
   Stack: Go + Bubble Tea (bubbles, lipgloss) for the TUI. Packaged
   with Nix flakes (plain nix, no flake-utils, multi-arch). VCS is jj;
-  remote git@github.com:mipmip/huphop.git; commit as Pim Snel, no
+  remote git@github.com:mipmip/hip.git; commit as Pim Snel, no
   self-promotion, commit after each OpenSpec change is archived.
 
   Clone path: configurable Go text/template `clone_pattern_tpl`
@@ -23,15 +23,15 @@ context: |
   Repo, RepoLower). Default "{{.BaseDir}}/{{.Short}}.{{.OwnerLower}}/{{.Repo}}"
   e.g. github TechNative-B-V/foo -> ~/gh.technative-b-v/foo.
 
-  Config: ~/.config/huphop/config.yaml. Cache: plain JSON per provider
-  under ~/.cache/huphop/. Each provider requires a `username` (your own
+  Config: ~/.config/hip/config.yaml. Cache: plain JSON per provider
+  under ~/.cache/hip/. Each provider requires a `username` (your own
   login): it identifies the self account (fetched via the authenticated
   endpoint; an empty `owners` resolves to it) and there is no self sentinel.
   Sync = clone missing + fast-forward pull existing; never force, skip
   dirty trees with a warning.
 
   PoC scope: TUI (provider -> owner -> repos, fuzzy filter, single +
-  bulk clone, open in browser, refresh) and headless `hup sync`.
+  bulk clone, open in browser, refresh) and headless `hip sync`.
   TUI modes: `default_mode` + `modes:` set per-mode chrome (ordered
   header/footer element slots; repo list is the body), picked with --mode.
   The `multiplex` mode clones-if-needed then runs a shell-safe

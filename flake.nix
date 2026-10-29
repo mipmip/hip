@@ -1,5 +1,5 @@
 {
-  description = "HupHop - multi-provider git portfolio manager";
+  description = "HIP (Hub Is Plural) - multi-provider git portfolio manager";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
@@ -22,18 +22,18 @@
     {
       packages = forAllSystems (pkgs: {
         default = pkgs.buildGoModule {
-          pname = "hup";
+          pname = "hip";
           inherit version;
           src = self;
           # Update when Go dependencies change; nix reports the expected hash.
           vendorHash = "sha256-hN/YWgfUfYgtPbL8YwLcDMyldyJDTGyjTqjVom6sQds=";
-          subPackages = [ "cmd/hup" ];
+          subPackages = [ "cmd/hip" ];
           # Tests run in the dedicated `gotest` check (which provides git).
           doCheck = false;
           ldflags = [ "-s" "-w" "-X main.version=${version}" ];
           meta = {
             description = "Multi-provider git portfolio manager";
-            mainProgram = "hup";
+            mainProgram = "hip";
           };
         };
       });
@@ -60,15 +60,15 @@
         # Test + coverage gate: runs the whole suite (incl. e2e) via
         # scripts/coverage.sh and fails below >=70% overall / >=80% core.
         coverage = self.packages.${pkgs.system}.default.overrideAttrs (old: {
-          pname = "hup-coverage";
+          pname = "hip-coverage";
           doCheck = true;
           # Sync/e2e tests shell out to git (and jj for the jj-clone path)
           # against local temp repos.
           nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.git pkgs.bash pkgs.jujutsu ];
           preCheck = ''
             export HOME=$(mktemp -d)
-            git config --global user.email test@huphop.invalid
-            git config --global user.name "huphop tests"
+            git config --global user.email test@hip.invalid
+            git config --global user.name "hip tests"
             git config --global init.defaultBranch main
           '';
           checkPhase = ''

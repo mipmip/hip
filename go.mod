@@ -1,4 +1,4 @@
-module github.com/mipmip/huphop
+module github.com/mipmip/hip
 
 go 1.26
 

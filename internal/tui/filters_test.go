@@ -3,7 +3,7 @@ package tui
 import (
 	"testing"
 
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 func TestTriStateMatch(t *testing.T) {

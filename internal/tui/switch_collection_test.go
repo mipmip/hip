@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/collections"
+	"github.com/mipmip/hip/internal/collections"
 )
 
 // sessionTpl is the session-per-collection shape from the README: the session is

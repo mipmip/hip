@@ -112,7 +112,7 @@ func (m *Model) cloneModalView() string {
 
 // headerText renders the breadcrumb / title for the current scope.
 func (m *Model) headerText() string {
-	crumb := "hup"
+	crumb := "hip"
 	if m.nav == levelCollections {
 		return crumb + " > collections"
 	}
@@ -308,7 +308,7 @@ func (m *Model) detailView() string {
 	var b strings.Builder
 
 	// Breadcrumb / title.
-	crumb := "hup"
+	crumb := "hip"
 	if it.Provider != nil {
 		crumb += " > " + it.Provider.Name
 	}

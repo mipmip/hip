@@ -40,12 +40,12 @@ The system SHALL report a per-provider summary of the run.
 
 ### Requirement: Sync command
 
-The system SHALL provide `hup sync [--provider NAME] [--no-refresh]` suitable
+The system SHALL provide `hip sync [--provider NAME] [--no-refresh]` suitable
 for cron.
 
 #### Scenario: Refresh then sync
 
-- **WHEN** the user runs `hup sync` without `--no-refresh`
+- **WHEN** the user runs `hip sync` without `--no-refresh`
 - **THEN** the cache is refreshed before the engine runs
 
 #### Scenario: Non-zero exit on failure
@@ -55,13 +55,13 @@ for cron.
 
 ### Requirement: Eager discovery sweep on sync
 
-When `all_owners` is enabled, `hup sync` and `hup refresh` SHALL discover
+When `all_owners` is enabled, `hip sync` and `hip refresh` SHALL discover
 owners and fetch repositories for the entire resolved owner set, so the cache
 and backups cover every org.
 
 #### Scenario: Sync covers all discovered owners
 
-- **WHEN** `hup sync` runs for a provider with `all_owners: true`
+- **WHEN** `hip sync` runs for a provider with `all_owners: true`
 - **THEN** it discovers owners, fetches repositories for every owner in the
   resolved set (minus exclusions), updates the cache, and clones/pulls them
 
@@ -72,7 +72,7 @@ and backups cover every org.
 
 ### Requirement: CLI fetch progress output
 
-`hup sync` and `hup refresh` SHALL print progress derived from the fetch
+`hip sync` and `hip refresh` SHALL print progress derived from the fetch
 event stream.
 
 #### Scenario: Per-owner progress lines
@@ -96,7 +96,7 @@ The CLI SHALL fetch multiple owners concurrently within the fixed worker cap.
 The clone engine SHALL offer a clone operation that emits progress events
 (a percentage and a phase label) as the clone proceeds, so an interactive caller
 can render a determinate progress bar. The existing non-progress clone used by
-`hup sync` is unaffected.
+`hip sync` is unaffected.
 
 #### Scenario: Progress is derived from git
 
@@ -147,7 +147,7 @@ Because `jj` emits its percentage only to a terminal and has no force-progress
 flag, the engine SHALL run the jj clone attached to a pseudo-terminal, strip
 ANSI control sequences, and parse the percentage into progress events, falling
 back to indeterminate progress when a chunk cannot be parsed. The plain
-(non-progress) clone used by `hup sync` needs no pseudo-terminal.
+(non-progress) clone used by `hip sync` needs no pseudo-terminal.
 
 #### Scenario: jj progress is parsed from the pty
 

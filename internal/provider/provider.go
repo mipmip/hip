@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mipmip/huphop/internal/config"
+	"github.com/mipmip/hip/internal/config"
 )
 
 // Repo is the provider-agnostic repository model shared by the cache, sync and

@@ -1,8 +1,9 @@
-# huphop
+# HIP
 
-Multi-provider git portfolio manager — a uniform on-disk layout for all your
-git repos across GitHub, Codeberg/Forgejo and GitLab, a TUI to browse and
-clone them, and a cron-friendly CLI to keep backup clones in sync.
+**Hub Is Plural.** HIP is a multi-provider git portfolio manager: a uniform
+on-disk layout for all your git repos across GitHub, Codeberg/Forgejo and
+GitLab, a TUI to browse and clone them, and a cron-friendly CLI (`hip`) to keep
+backup clones in sync.
 
 > Status: PoC / alpha base. See [BRIEFING.md](./BRIEFING.md) for the full
 > design and [CLAUDE.md](./CLAUDE.md) for the build guide. The roadmap lives in
@@ -28,12 +29,12 @@ nix flake check        # build + tests
 - **Collections**: hand-curated, named groups of repos that span owners,
   organizations and forges.
 
-Configuration lives in `~/.config/huphop/config.yaml`; cached repo metadata in
-`~/.cache/huphop/`.
+Configuration lives in `~/.config/hip/config.yaml`; cached repo metadata in
+`~/.cache/hip/`.
 
 ## Collections
 
-A collection is a named group of repositories you assemble yourself — say the
+A collection is a named group of repositories you assemble yourself, say the
 terraform modules you maintain across three organizations and two forges. It is
 a view, never storage: adding or removing members never touches a clone on disk.
 
@@ -54,7 +55,7 @@ Build one from the TUI:
 `space` is a term separator in the filter query, so selection has its own keys:
 `tab` and `shift+tab` work while you are still typing, and the query is left
 untouched. Selections live on the repository set rather than the visible list,
-so they survive re-filtering — narrow, pick, retype, pick again. Because the
+so they survive re-filtering: narrow, pick, retype, pick again. Because the
 repos you picked scroll out of view as the query changes, `x` cycles a
 `selected` facet (`all` → `only` → `hide`) that shows just what is in your
 basket; the position indicator also reports how many are selected in total.
@@ -63,8 +64,8 @@ basket; the position indicator also reports how many are selected in total.
 plus a `+ new collection` entry that asks for a name. Browse collections from
 the `Collections` entry in the provider list.
 
-Collections are stored in `~/.config/huphop/collections.yaml`, beside
-`config.yaml` but writable — the TUI edits it and rewrites it atomically:
+Collections are stored in `~/.config/hip/collections.yaml`, beside
+`config.yaml` but writable: the TUI edits it and rewrites it atomically:
 
 ```yaml
 version: 1
@@ -87,8 +88,8 @@ dropped.
 Launch straight into one:
 
 ```bash
-hup tui --collection terraform-modules                  # scoped repo list
-hup tui --collection terraform-modules --mode multiplex --filter
+hip tui --collection terraform-modules                  # scoped repo list
+hip tui --collection terraform-modules --mode multiplex --filter
 ```
 
 The second form is the tmux jump list scoped to a collection: type, press Enter,
@@ -105,7 +106,7 @@ modes:
       open-or-new-window-with-name="{{.Repo}}" layout-template="3-pane-coding"
 ```
 
-Outside a collection — the combined view, or an owner drill-down —
+Outside a collection (the combined view, or an owner drill-down)
 `{{.Collection}}` is empty; no substitute is invented for you. If the same
 keybinding should also work there, say so in the template:
 
@@ -118,5 +119,5 @@ belong to several collections, and a path that varied by collection would clone
 it twice and leave `sync` without a canonical copy.
 
 Not yet implemented: automatic collections computed from language or forge
-topics, and a Home Manager–style declared (read-only) layer beneath the
+topics, and a Home Manager-style declared (read-only) layer beneath the
 writable file.

@@ -1,4 +1,4 @@
-// Command hup is a multi-provider git portfolio manager.
+// Command hip is a multi-provider git portfolio manager.
 //
 // This is the takeoff scaffolding entrypoint. Subcommands (config, refresh,
 // sync, tui) are implemented across the OpenSpec changes tracked in beans.
@@ -12,12 +12,12 @@ import (
 	"os"
 	"time"
 
-	huphop "github.com/mipmip/huphop"
-	"github.com/mipmip/huphop/internal/cache"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
-	"github.com/mipmip/huphop/internal/syncer"
-	"github.com/mipmip/huphop/internal/tui"
+	hip "github.com/mipmip/hip"
+	"github.com/mipmip/hip/internal/cache"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
+	"github.com/mipmip/hip/internal/syncer"
+	"github.com/mipmip/hip/internal/tui"
 )
 
 // version is set at build time via -ldflags "-X main.version=..." (goreleaser
@@ -32,12 +32,12 @@ func resolveVersion() string {
 	if version != "" {
 		return version
 	}
-	return huphop.Version
+	return hip.Version
 }
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "hup:", err)
+		fmt.Fprintln(os.Stderr, "hip:", err)
 		os.Exit(1)
 	}
 }
@@ -50,7 +50,7 @@ func run(args []string) error {
 
 	switch cmd {
 	case "version", "--version", "-v":
-		fmt.Println("hup", resolveVersion())
+		fmt.Println("hip", resolveVersion())
 		return nil
 	case "help", "-h", "--help":
 		usage(os.Stdout)
@@ -70,7 +70,7 @@ func run(args []string) error {
 }
 
 // runTUI loads the configuration and launches the interactive Bubble Tea
-// browser. It is the default command (bare `hup`) and `hup tui`.
+// browser. It is the default command (bare `hip`) and `hip tui`.
 func runTUI(args []string) error {
 	fs := flag.NewFlagSet("tui", flag.ContinueOnError)
 	mode := fs.String("mode", "", "TUI mode (defaults to config default_mode)")
@@ -125,7 +125,7 @@ func runConfig(args []string) error {
 		}
 		return nil
 	case "", "-h", "--help", "help":
-		fmt.Println("Usage: hup config <path|check>")
+		fmt.Println("Usage: hip config <path|check>")
 		return nil
 	default:
 		return fmt.Errorf("unknown config subcommand %q", sub)
@@ -170,21 +170,21 @@ func refreshProviders(ctx context.Context, selected []*config.Provider) error {
 	for _, p := range selected {
 		client, err := reg.Build(p)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "hup: %s: %v\n", p.Name, err)
+			fmt.Fprintf(os.Stderr, "hip: %s: %v\n", p.Name, err)
 			setErr(err)
 			continue
 		}
 
 		if p.AllOwners {
 			if err := refreshAllOwners(ctx, client, p, printer); err != nil {
-				fmt.Fprintf(os.Stderr, "hup: %s: %v\n", p.Name, err)
+				fmt.Fprintf(os.Stderr, "hip: %s: %v\n", p.Name, err)
 				setErr(err)
 			}
 			continue
 		}
 
 		if err := refreshExplicitOwners(ctx, client, p, printer); err != nil {
-			fmt.Fprintf(os.Stderr, "hup: %s: %v\n", p.Name, err)
+			fmt.Fprintf(os.Stderr, "hip: %s: %v\n", p.Name, err)
 			setErr(err)
 		}
 	}
@@ -243,7 +243,7 @@ func refreshAllOwners(ctx context.Context, client provider.Provider, p *config.P
 		return fmt.Errorf("discovering owners: %w", err)
 	}
 	if w := provider.ZeroDiscoveryWarning(p, discovered); w != "" {
-		fmt.Fprintf(os.Stderr, "hup: warning: %s\n", w)
+		fmt.Fprintf(os.Stderr, "hip: warning: %s\n", w)
 	}
 
 	owners := config.ResolveOwners(p, discovered)
@@ -326,7 +326,7 @@ func runSync(args []string) error {
 		// Refresh errors are logged but do not abort the sync; we still act on
 		// whatever cache is available.
 		if err := refreshProviders(ctx, selected); err != nil {
-			fmt.Fprintf(os.Stderr, "hup: refresh reported errors: %v\n", err)
+			fmt.Fprintf(os.Stderr, "hip: refresh reported errors: %v\n", err)
 		}
 	}
 
@@ -336,12 +336,12 @@ func runSync(args []string) error {
 	for _, p := range selected {
 		c, ok, err := cache.LoadOrEmpty(p.Name)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "hup: %s: %v\n", p.Name, err)
+			fmt.Fprintf(os.Stderr, "hip: %s: %v\n", p.Name, err)
 			summary.Providers = append(summary.Providers, syncer.ProviderSummary{Provider: p.Name})
 			continue
 		}
 		if !ok {
-			fmt.Fprintf(os.Stderr, "hup: %s: no cache; run 'hup refresh' first\n", p.Name)
+			fmt.Fprintf(os.Stderr, "hip: %s: no cache; run 'hip refresh' first\n", p.Name)
 			summary.Providers = append(summary.Providers, syncer.ProviderSummary{Provider: p.Name})
 			continue
 		}
@@ -373,10 +373,10 @@ func logProviderSummary(ps syncer.ProviderSummary) {
 			fmt.Printf("%s: updated %s\n", ps.Provider, name)
 		case syncer.ActionSkipped:
 			fmt.Printf("%s: skipped %s (%s)\n", ps.Provider, name, r.Warning)
-			fmt.Fprintf(os.Stderr, "hup: %s: warning: %s\n", ps.Provider, r.Warning)
+			fmt.Fprintf(os.Stderr, "hip: %s: warning: %s\n", ps.Provider, r.Warning)
 		case syncer.ActionFailed:
 			fmt.Printf("%s: failed %s\n", ps.Provider, name)
-			fmt.Fprintf(os.Stderr, "hup: %s: %s: %v\n", ps.Provider, name, r.Err)
+			fmt.Fprintf(os.Stderr, "hip: %s: %s: %v\n", ps.Provider, name, r.Err)
 		}
 	}
 	fmt.Printf("%s: %d cloned, %d updated, %d skipped, %d failed\n",
@@ -384,10 +384,10 @@ func logProviderSummary(ps syncer.ProviderSummary) {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprintf(w, `hup %s - multi-provider git portfolio manager
+	fmt.Fprintf(w, `hip %s - Hub Is Plural: multi-provider git portfolio manager
 
 Usage:
-  hup [command]
+  hip [command]
 
 Commands:
   tui              Browse and clone repositories (default)

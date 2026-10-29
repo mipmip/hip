@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/cache"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/fetch"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/cache"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/fetch"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // fakeOwnerFetcher implements provider.Provider (+ OwnerFetcher). Its FetchOwner

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/fetch"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/fetch"
 )
 
 // defaultGitHubAPI is the public GitHub REST API base URL.

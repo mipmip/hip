@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/fetch"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/fetch"
 )
 
 // evRecorder collects fetch events thread-safely.
@@ -51,7 +51,7 @@ func (r *evRecorder) maxTotalPages() int {
 // --- GitHub: total from rel="last", fan-out pages 2..N, events emitted. ---
 
 func TestGitHubFetchOwnerDeterminate(t *testing.T) {
-	t.Setenv("HUPHOP_GITHUB_TOKEN", "tok")
+	t.Setenv("HIP_GITHUB_TOKEN", "tok")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/orgs/acme/repos", func(w http.ResponseWriter, r *http.Request) {
 		host := "http://" + r.Host
@@ -73,7 +73,7 @@ func TestGitHubFetchOwnerDeterminate(t *testing.T) {
 
 	cfg := config.Provider{
 		Name: "github", Type: config.ProviderGitHub, Short: "gh", APIURL: srv.URL,
-		Auth: config.Auth{Env: "HUPHOP_GITHUB_TOKEN"},
+		Auth: config.Auth{Env: "HIP_GITHUB_TOKEN"},
 	}
 	gh := NewGitHub(cfg, srv.Client())
 
@@ -97,7 +97,7 @@ func TestGitHubFetchOwnerDeterminate(t *testing.T) {
 }
 
 func TestGitHubFetchOwnerSelf(t *testing.T) {
-	t.Setenv("HUPHOP_GITHUB_TOKEN", "tok")
+	t.Setenv("HIP_GITHUB_TOKEN", "tok")
 	var hit bool
 	mux := http.NewServeMux()
 	mux.HandleFunc("/user/repos", func(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +108,7 @@ func TestGitHubFetchOwnerSelf(t *testing.T) {
 	defer srv.Close()
 	cfg := config.Provider{
 		Name: "github", Type: config.ProviderGitHub, Short: "gh", Username: "pim", APIURL: srv.URL,
-		Auth: config.Auth{Env: "HUPHOP_GITHUB_TOKEN"},
+		Auth: config.Auth{Env: "HIP_GITHUB_TOKEN"},
 	}
 	repos, err := NewGitHub(cfg, srv.Client()).FetchOwner(context.Background(), nil, cfg.Username)
 	if err != nil {
@@ -120,7 +120,7 @@ func TestGitHubFetchOwnerSelf(t *testing.T) {
 }
 
 func TestGitHubFetchOwnerCancel(t *testing.T) {
-	t.Setenv("HUPHOP_GITHUB_TOKEN", "tok")
+	t.Setenv("HIP_GITHUB_TOKEN", "tok")
 	ctx, cancel := context.WithCancel(context.Background())
 	mux := http.NewServeMux()
 	mux.HandleFunc("/orgs/acme/repos", func(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +134,7 @@ func TestGitHubFetchOwnerCancel(t *testing.T) {
 	defer srv.Close()
 	cfg := config.Provider{
 		Name: "github", Type: config.ProviderGitHub, Short: "gh", APIURL: srv.URL,
-		Auth: config.Auth{Env: "HUPHOP_GITHUB_TOKEN"},
+		Auth: config.Auth{Env: "HIP_GITHUB_TOKEN"},
 	}
 	rec := &evRecorder{}
 	_, err := NewGitHub(cfg, srv.Client()).FetchOwner(ctx, rec.emit, "acme")
@@ -149,7 +149,7 @@ func TestGitHubFetchOwnerCancel(t *testing.T) {
 // --- Codeberg: total derived from X-Total-Count. ---
 
 func TestCodebergFetchOwnerTotalFromHeader(t *testing.T) {
-	t.Setenv("HUPHOP_CODEBERG_TOKEN", "cb")
+	t.Setenv("HIP_CODEBERG_TOKEN", "cb")
 	// 3 pages at limit 50 -> X-Total-Count between 101 and 150.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/orgs/org/repos", func(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +164,7 @@ func TestCodebergFetchOwnerTotalFromHeader(t *testing.T) {
 	defer srv.Close()
 	cfg := config.Provider{
 		Name: "codeberg", Type: config.ProviderCodeberg, Short: "cb", APIURL: srv.URL,
-		Auth: config.Auth{Env: "HUPHOP_CODEBERG_TOKEN"},
+		Auth: config.Auth{Env: "HIP_CODEBERG_TOKEN"},
 	}
 	rec := &evRecorder{}
 	repos, err := NewCodeberg(cfg, srv.Client()).FetchOwner(context.Background(), rec.emit, "org")
@@ -202,7 +202,7 @@ func TestCodebergTotalPages(t *testing.T) {
 // --- GitLab: total from X-Total-Pages. ---
 
 func TestGitLabFetchOwnerTotalPages(t *testing.T) {
-	t.Setenv("HUPHOP_GITLAB_TOKEN", "gl")
+	t.Setenv("HIP_GITLAB_TOKEN", "gl")
 	mux := http.NewServeMux()
 	mux.HandleFunc("/groups/acme/projects", func(w http.ResponseWriter, r *http.Request) {
 		page := r.URL.Query().Get("page")
@@ -215,7 +215,7 @@ func TestGitLabFetchOwnerTotalPages(t *testing.T) {
 	defer srv.Close()
 	cfg := config.Provider{
 		Name: "gitlab", Type: config.ProviderGitLab, Short: "gl", APIURL: srv.URL,
-		Auth: config.Auth{Env: "HUPHOP_GITLAB_TOKEN"},
+		Auth: config.Auth{Env: "HIP_GITLAB_TOKEN"},
 	}
 	rec := &evRecorder{}
 	repos, err := NewGitLab(cfg, srv.Client()).FetchOwner(context.Background(), rec.emit, "acme")

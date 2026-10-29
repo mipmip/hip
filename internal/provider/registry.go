@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/mipmip/huphop/internal/config"
+	"github.com/mipmip/hip/internal/config"
 )
 
 // Constructor builds a Provider from its configuration.

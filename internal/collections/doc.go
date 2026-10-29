@@ -1,5 +1,5 @@
 // Package collections persists named, user-defined repository collections in
-// ~/.config/huphop/collections.yaml: hand-curated groupings of repositories that
+// ~/.config/hip/collections.yaml: hand-curated groupings of repositories that
 // may span owners, organizations and providers.
 //
 // A collection is a view, never storage: it holds references to repositories

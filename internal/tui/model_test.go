@@ -7,8 +7,8 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // fakeCloner records clone calls and returns a canned result.

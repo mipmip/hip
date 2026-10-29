@@ -20,7 +20,7 @@ providers:
     clone_protocol: ssh
     auth:
       cli: gh
-      env: HUPHOP_GITHUB_TOKEN
+      env: HIP_GITHUB_TOKEN
     owners:
       - mipmip
       - TechNative-B-V
@@ -33,7 +33,7 @@ providers:
     api_url: https://codeberg.org
     web_url: https://codeberg.org
     auth:
-      env: HUPHOP_CODEBERG_TOKEN
+      env: HIP_CODEBERG_TOKEN
 `
 
 func TestDefaultPath(t *testing.T) {
@@ -43,7 +43,7 @@ func TestDefaultPath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := filepath.Join("/xdg/conf", "huphop", "config.yaml")
+		want := filepath.Join("/xdg/conf", "hip", "config.yaml")
 		if got != want {
 			t.Fatalf("got %q want %q", got, want)
 		}
@@ -57,7 +57,7 @@ func TestDefaultPath(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := filepath.Join(home, ".config", "huphop", "config.yaml")
+		want := filepath.Join(home, ".config", "hip", "config.yaml")
 		if got != want {
 			t.Fatalf("got %q want %q", got, want)
 		}
@@ -144,7 +144,7 @@ func TestLoadUsesDefaultPath(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", "")
-	dir := filepath.Join(home, ".config", "huphop")
+	dir := filepath.Join(home, ".config", "hip")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
-# HupHop — agent build guide
+# HIP — agent build guide
 
-HupHop is a multi-provider git portfolio manager (GitHub, Codeberg/Forgejo,
+HIP is a multi-provider git portfolio manager (GitHub, Codeberg/Forgejo,
 GitLab). It gives a uniform on-disk layout, a Bubble Tea TUI to browse/clone,
 and a cron-friendly CLI to sync backups.
 
@@ -11,13 +11,13 @@ scope, coverage gate). The condensed version is also in
 
 ## Tooling
 
-- **Language**: Go (module `github.com/mipmip/huphop`), Bubble Tea for the TUI.
+- **Language**: Go (module `github.com/mipmip/hip`), Bubble Tea for the TUI.
 - **Packaging**: Nix flakes, plain nix (no flake-utils), multi-arch. The PoC
   must build and test under nix from the start.
 - **Tickets**: `beans` (run `beans prime` to learn it). Milestones are titled
   `01`…`05`; epics hang under milestones. Administer them as you work.
 - **Specs**: OpenSpec (spec-driven schema). One change per epic.
-- **VCS**: `jj`. Remote: `git@github.com:mipmip/huphop.git`.
+- **VCS**: `jj`. Remote: `git@github.com:mipmip/hip.git`.
   Commit as **Pim Snel**, **no self-promotion**. Commit after every archived
   OpenSpec change.
 
@@ -69,7 +69,7 @@ in `nix flake check`.
 ## Layout
 
 ```
-cmd/hup/             CLI entrypoint (subcommands: tui, sync, refresh, config)
+cmd/hip/             CLI entrypoint (subcommands: tui, sync, refresh, config)
 internal/config/    config.yaml loading + validation
 internal/clonepath/ clone-path template engine
 internal/provider/  Provider interface, Repo model, auth resolver + clients
@@ -86,6 +86,6 @@ internal/tui/        Bubble Tea UI
 - Non-interactive commands are cron-friendly: line-oriented logs, non-zero
   exit on failure.
 - Auth resolution: configured CLI token (`gh`/`glab`) → env PAT
-  (`HUPHOP_<PROVIDER>_TOKEN`) → clear error. Codeberg is env-PAT only.
+  (`HIP_<PROVIDER>_TOKEN`) → clear error. Codeberg is env-PAT only.
 - Keep `internal/` package boundaries; no network in unit tests (mock HTTP,
   use temp git repos and temp dirs).

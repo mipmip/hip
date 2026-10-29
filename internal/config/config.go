@@ -40,7 +40,7 @@ const (
 	SearchSubstring = "substring"
 )
 
-// Config is the top-level huphop configuration parsed from config.yaml.
+// Config is the top-level hip configuration parsed from config.yaml.
 type Config struct {
 	// BaseDir is the root under which all trees are created. Tilde-expanded to
 	// an absolute path after loading.
@@ -267,16 +267,16 @@ type Auth struct {
 }
 
 // DefaultPath returns the resolved config path using $XDG_CONFIG_HOME when set,
-// otherwise ~/.config/huphop/config.yaml.
+// otherwise ~/.config/hip/config.yaml.
 func DefaultPath() (string, error) {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "huphop", "config.yaml"), nil
+		return filepath.Join(xdg, "hip", "config.yaml"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolving home directory: %w", err)
 	}
-	return filepath.Join(home, ".config", "huphop", "config.yaml"), nil
+	return filepath.Join(home, ".config", "hip", "config.yaml"), nil
 }
 
 // Load reads, defaults and validates the configuration from the default path.

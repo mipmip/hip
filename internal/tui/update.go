@@ -8,9 +8,9 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/mipmip/huphop/internal/cache"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/fetch"
+	"github.com/mipmip/hip/internal/cache"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/fetch"
 )
 
 // Update implements tea.Model. It is pure with respect to side effects: all

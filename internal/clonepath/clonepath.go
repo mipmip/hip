@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/mipmip/huphop/internal/config"
+	"github.com/mipmip/hip/internal/config"
 )
 
 // Data holds the fields available to a clone-path template. See BRIEFING.md §5.

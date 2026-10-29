@@ -1,5 +1,5 @@
 // Package cache persists per-provider repository metadata as JSON under
-// ~/.cache/huphop/<provider>.json, acting as the single source of truth for
+// ~/.cache/hip/<provider>.json, acting as the single source of truth for
 // the TUI and sync.
 //
 // Implemented in milestone "02 Provider clients & cache", epic "02d JSON cache

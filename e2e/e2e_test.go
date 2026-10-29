@@ -1,4 +1,4 @@
-// Package e2e contains hermetic end-to-end tests for the primary huphop flows:
+// Package e2e contains hermetic end-to-end tests for the primary hip flows:
 // refresh -> browse -> clone, and sync (clone-missing then fast-forward). They
 // stand up an httptest.Server for the provider API and use local bare git repos
 // (file:// clone sources) so no real network or SSH is required. Everything runs
@@ -17,21 +17,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mipmip/huphop/internal/cache"
-	"github.com/mipmip/huphop/internal/clonepath"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
-	"github.com/mipmip/huphop/internal/syncer"
+	"github.com/mipmip/hip/internal/cache"
+	"github.com/mipmip/hip/internal/clonepath"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
+	"github.com/mipmip/hip/internal/syncer"
 )
 
 // gitEnv returns a hermetic environment for git so commits are deterministic and
 // no user/global/system config or credential prompts bleed into the tests.
 func gitEnv() []string {
 	return append(os.Environ(),
-		"GIT_AUTHOR_NAME=Huphop E2E",
-		"GIT_AUTHOR_EMAIL=e2e@huphop.invalid",
-		"GIT_COMMITTER_NAME=Huphop E2E",
-		"GIT_COMMITTER_EMAIL=e2e@huphop.invalid",
+		"GIT_AUTHOR_NAME=Hip E2E",
+		"GIT_AUTHOR_EMAIL=e2e@hip.invalid",
+		"GIT_COMMITTER_NAME=Hip E2E",
+		"GIT_COMMITTER_EMAIL=e2e@hip.invalid",
 		"GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_CONFIG_SYSTEM=/dev/null",
 		"GIT_TERMINAL_PROMPT=0",
@@ -56,10 +56,10 @@ func runGit(t *testing.T, dir string, args ...string) string {
 func hermeticGitEnv(t *testing.T) {
 	t.Helper()
 	for _, kv := range [][2]string{
-		{"GIT_AUTHOR_NAME", "Huphop E2E"},
-		{"GIT_AUTHOR_EMAIL", "e2e@huphop.invalid"},
-		{"GIT_COMMITTER_NAME", "Huphop E2E"},
-		{"GIT_COMMITTER_EMAIL", "e2e@huphop.invalid"},
+		{"GIT_AUTHOR_NAME", "Hip E2E"},
+		{"GIT_AUTHOR_EMAIL", "e2e@hip.invalid"},
+		{"GIT_COMMITTER_NAME", "Hip E2E"},
+		{"GIT_COMMITTER_EMAIL", "e2e@hip.invalid"},
 		{"GIT_CONFIG_GLOBAL", "/dev/null"},
 		{"GIT_CONFIG_SYSTEM", "/dev/null"},
 		{"GIT_TERMINAL_PROMPT", "0"},
@@ -153,14 +153,14 @@ func newGitHubFixtureServer(t *testing.T, owner, repo, bareURL, wantToken string
 	return srv
 }
 
-// writeConfig writes a minimal config.yaml under XDG_CONFIG_HOME/huphop pointing
+// writeConfig writes a minimal config.yaml under XDG_CONFIG_HOME/hip pointing
 // api_url at apiURL and returns the loaded, validated Config.
 func writeConfig(t *testing.T, baseDir, apiURL, owner, tokenEnv string) *config.Config {
 	t.Helper()
 	xdgConfig := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
 
-	cfgDir := filepath.Join(xdgConfig, "huphop")
+	cfgDir := filepath.Join(xdgConfig, "hip")
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestRefreshBrowseClone(t *testing.T) {
 
 	const owner = "acme"
 	const repo = "widget"
-	const tokenEnv = "HUPHOP_GITHUB_TOKEN"
+	const tokenEnv = "HIP_GITHUB_TOKEN"
 	const token = "e2e-token"
 	t.Setenv(tokenEnv, token)
 

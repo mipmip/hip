@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mipmip/huphop/internal/cache"
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/cache"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // TestNewFromCacheSmoke constructs the initial model from a temp cache and calls

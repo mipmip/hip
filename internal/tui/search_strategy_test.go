@@ -5,8 +5,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/textinput"
 
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // newStrategyModel builds a repos-level Model for one owner with the given

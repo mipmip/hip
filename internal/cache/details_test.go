@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 func TestDetailsRoundTrip(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // Details is the persisted per-repository detail snapshot, cached separately

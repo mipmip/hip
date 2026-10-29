@@ -7,7 +7,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/mipmip/huphop/internal/clonepath"
+	"github.com/mipmip/hip/internal/clonepath"
 )
 
 // runArgv executes argv without a shell, wired to the user's terminal. It is the

@@ -1,7 +1,7 @@
-# HupHop sample configuration.
+# HIP sample configuration.
 #
-# Copy to ~/.config/huphop/config.yaml (or $XDG_CONFIG_HOME/huphop/config.yaml)
-# and adjust. Validate with: hup config check
+# Copy to ~/.config/hip/config.yaml (or $XDG_CONFIG_HOME/hip/config.yaml)
+# and adjust. Validate with: hip config check
 #
 # Unknown keys are rejected (strict decoding), so stick to the keys below.
 
@@ -67,7 +67,7 @@ providers:
     #     vcs: jj
     auth:
       cli: gh                    # reuse the `gh` CLI token when available
-      env: HUPHOP_GITHUB_TOKEN   # PAT fallback for headless/cron use
+      env: HIP_GITHUB_TOKEN   # PAT fallback for headless/cron use
     # NOTE: leave `owners` unset to list YOUR OWN repositories (your `username`).
     # List `owners` to name organizations instead — each org entry is fetched via
     # /orgs/<owner>/repos.
@@ -80,7 +80,7 @@ providers:
     # `sync`/`refresh` eagerly fetch repos for every discovered owner; the TUI
     # lists owners immediately and fetches each on first entry. Any explicit
     # `owners` above are unioned in. Requires an org-read token scope (GitHub
-    # read:org) or discovery finds nothing and huphop warns.
+    # read:org) or discovery finds nothing and hip warns.
     #
     # all_owners: true
     #

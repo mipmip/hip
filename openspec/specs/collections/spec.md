@@ -9,8 +9,8 @@ TBD - created by archiving change 2026-09-02-add-repo-collections. Update Purpos
 
 The system SHALL persist user-defined repository collections in a writable YAML
 file in the configuration directory, `collections.yaml` alongside `config.yaml`
-(`$XDG_CONFIG_HOME/huphop/collections.yaml`, otherwise
-`~/.config/huphop/collections.yaml`). The file SHALL carry a schema version and
+(`$XDG_CONFIG_HOME/hip/collections.yaml`, otherwise
+`~/.config/hip/collections.yaml`). The file SHALL carry a schema version and
 SHALL represent collections and their members as ordered lists, so member order
 is the order in which repositories were added and the file stays stable across
 writes. A missing file SHALL load as an empty store without error; the directory

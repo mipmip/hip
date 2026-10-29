@@ -15,7 +15,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/mipmip/huphop/internal/collections"
+	"github.com/mipmip/hip/internal/collections"
 )
 
 // newCollectionRow is the sentinel cursor row in the picker that creates a

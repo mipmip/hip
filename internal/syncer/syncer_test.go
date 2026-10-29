@@ -9,18 +9,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mipmip/huphop/internal/config"
-	"github.com/mipmip/huphop/internal/provider"
+	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/provider"
 )
 
 // gitEnv returns an environment that makes git commits deterministic and
 // hermetic (no user config, agent, or global hooks bleeding in).
 func gitEnv() []string {
 	return append(os.Environ(),
-		"GIT_AUTHOR_NAME=Huphop Test",
-		"GIT_AUTHOR_EMAIL=test@huphop.invalid",
-		"GIT_COMMITTER_NAME=Huphop Test",
-		"GIT_COMMITTER_EMAIL=test@huphop.invalid",
+		"GIT_AUTHOR_NAME=Hip Test",
+		"GIT_AUTHOR_EMAIL=test@hip.invalid",
+		"GIT_COMMITTER_NAME=Hip Test",
+		"GIT_COMMITTER_EMAIL=test@hip.invalid",
 		"GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_CONFIG_SYSTEM=/dev/null",
 		"GIT_TERMINAL_PROMPT=0",
@@ -80,10 +80,10 @@ func addRemoteCommit(t *testing.T, bare string) {
 func testEngine(t *testing.T, cfg *config.Config) *Engine {
 	t.Helper()
 	for _, kv := range [][2]string{
-		{"GIT_AUTHOR_NAME", "Huphop Test"},
-		{"GIT_AUTHOR_EMAIL", "test@huphop.invalid"},
-		{"GIT_COMMITTER_NAME", "Huphop Test"},
-		{"GIT_COMMITTER_EMAIL", "test@huphop.invalid"},
+		{"GIT_AUTHOR_NAME", "Hip Test"},
+		{"GIT_AUTHOR_EMAIL", "test@hip.invalid"},
+		{"GIT_COMMITTER_NAME", "Hip Test"},
+		{"GIT_COMMITTER_EMAIL", "test@hip.invalid"},
 		{"GIT_CONFIG_GLOBAL", "/dev/null"},
 		{"GIT_CONFIG_SYSTEM", "/dev/null"},
 		{"GIT_TERMINAL_PROMPT", "0"},

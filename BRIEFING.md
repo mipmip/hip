@@ -1,11 +1,11 @@
-# HupHop — PoC Briefing
+# HIP — PoC Briefing
 
 > This document is the single source of truth for autonomously building the
-> HupHop PoC (alpha base). It is written to be consumed by `mip:1shotpoc`.
+> HIP PoC (alpha base). It is written to be consumed by `mip:1shotpoc`.
 
 ## 1. Purpose
 
-HupHop controls an ever-growing portfolio of git projects spread across
+HIP controls an ever-growing portfolio of git projects spread across
 multiple git providers (GitHub, Codeberg, GitLab today; Bitbucket later). It
 gives a **uniform on-disk directory structure**, a **browsable TUI** for
 discovering and cloning repos, and a **headless CLI** for cron-driven backup
@@ -37,11 +37,11 @@ truth.
 | Providers   | GitHub, Codeberg (Forgejo/Gitea), GitLab                         |
 | Auth        | Reuse `gh` / `glab` CLIs; PAT via env var fallback for CLI/cron   |
 | Sync mode   | Clone missing + fast-forward pull existing (working trees)        |
-| Cache       | Plain JSON file per provider under `~/.cache/huphop/`             |
+| Cache       | Plain JSON file per provider under `~/.cache/hip/`             |
 | Clone path  | Configurable Go text/template (`clone_pattern_tpl`) with fields   |
 | Coverage    | Enforced min **70%** overall; **≥80%** on core logic packages    |
 | PoC scope   | TUI browse (fuzzy + hierarchic), clone single/bulk, open browser, CLI sync |
-| VCS         | `jj`; remote `git@github.com:mipmip/huphop.git`; commit as Pim Snel, no self-promo |
+| VCS         | `jj`; remote `git@github.com:mipmip/hip.git`; commit as Pim Snel, no self-promo |
 | Tickets     | `beans` milestones/epics, milestone titles prefixed `01`, `02`... |
 | Specs       | OpenSpec proposals + tasks, fully set up before build            |
 | Packaging   | Nix flakes, plain nix (no flake-utils), multi-arch               |
@@ -78,7 +78,7 @@ Provider short codes: `gh` (GitHub), `cb` (Codeberg), `gl` (GitLab).
 
 ## 6. Configuration
 
-Location: `~/.config/huphop/config.yaml`. Proposed schema (Claude may refine
+Location: `~/.config/hip/config.yaml`. Proposed schema (Claude may refine
 during OpenSpec, keep it minimal and documented):
 
 ```yaml
@@ -102,7 +102,7 @@ providers:
     # clone_pattern_tpl: "..."      # optional per-provider override
     auth:
       cli: gh                       # reuse this CLI's token when present
-      env: HUPHOP_GITHUB_TOKEN      # PAT fallback (headless/cron)
+      env: HIP_GITHUB_TOKEN      # PAT fallback (headless/cron)
     owners:                         # optional orgs; empty = your own account (username)
       - TechNative-B-V
     include_archived: false         # skip archived repos by default
@@ -115,7 +115,7 @@ providers:
     web_url: https://codeberg.org
     clone_protocol: ssh
     auth:
-      env: HUPHOP_CODEBERG_TOKEN    # env-PAT first (no first-party CLI)
+      env: HIP_CODEBERG_TOKEN    # env-PAT first (no first-party CLI)
 
   - name: gitlab
     type: gitlab
@@ -125,7 +125,7 @@ providers:
     clone_protocol: ssh
     auth:
       cli: glab                     # reuse glab token when present
-      env: HUPHOP_GITLAB_TOKEN      # PAT fallback (headless/cron)
+      env: HIP_GITLAB_TOKEN      # PAT fallback (headless/cron)
 ```
 
 - Auth resolution order per provider: configured `cli` token → `env` PAT →
@@ -135,21 +135,21 @@ providers:
 
 ## 7. Cache
 
-- One JSON file per provider: `~/.cache/huphop/<provider-name>.json`.
+- One JSON file per provider: `~/.cache/hip/<provider-name>.json`.
 - Contents: `fetched_at` timestamp + list of repos with: owner, name,
   description, ssh_url, https_url, web_url, default_branch, archived, fork,
   updated_at.
-- TUI reads cache; a refresh action re-fetches from the API. `hup sync`
+- TUI reads cache; a refresh action re-fetches from the API. `hip sync`
   refreshes then acts.
 
 ## 8. Commands (CLI surface)
 
-- `hup` / `hup tui [--mode NAME]` — launch the TUI (default). `--mode` selects a
+- `hip` / `hip tui [--mode NAME]` — launch the TUI (default). `--mode` selects a
   configured mode (else `default_mode`).
-- `hup sync [--provider NAME] [--no-refresh]` — headless: refresh cache,
+- `hip sync [--provider NAME] [--no-refresh]` — headless: refresh cache,
   then clone-missing + ff-pull-existing across configured owners. Cron target.
-- `hup refresh [--provider NAME]` — refresh cache only.
-- `hup config path|check` — show config path / validate config + auth.
+- `hip refresh [--provider NAME]` — refresh cache only.
+- `hip config path|check` — show config path / validate config + auth.
 
 Exit codes and non-interactive output must be cron-friendly (structured,
 line-oriented logging; non-zero on failure).
@@ -217,7 +217,7 @@ milestones/epics throughout.
 ## 13. Definition of done (PoC)
 
 - `nix build` / `nix run` work on supported architectures via the flake.
-- `hup sync` clones and updates a configured tree end-to-end (proven by e2e).
+- `hip sync` clones and updates a configured tree end-to-end (proven by e2e).
 - TUI can browse all three providers, fuzzy-find, single/bulk clone to the
   correct templated target paths, and open a repo in the browser.
 - Config + JSON cache act as the single source of truth.

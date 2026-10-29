@@ -67,17 +67,17 @@ type Store struct {
 }
 
 // DefaultPath returns the resolved collections path using $XDG_CONFIG_HOME when
-// set, otherwise ~/.config/huphop/collections.yaml. It sits beside config.yaml
+// set, otherwise ~/.config/hip/collections.yaml. It sits beside config.yaml
 // in the configuration directory, but is writable: the TUI edits it at runtime.
 func DefaultPath() (string, error) {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "huphop", "collections.yaml"), nil
+		return filepath.Join(xdg, "hip", "collections.yaml"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("resolving home directory: %w", err)
 	}
-	return filepath.Join(home, ".config", "huphop", "collections.yaml"), nil
+	return filepath.Join(home, ".config", "hip", "collections.yaml"), nil
 }
 
 // Load reads the collections file. A missing file yields an empty store and no
