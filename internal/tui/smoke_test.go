@@ -33,7 +33,7 @@ func TestNewFromCacheSmoke(t *testing.T) {
 		},
 	}
 
-	m := New(cfg)
+	m := New(cfg, "test-version")
 	if got := len(m.reposByProvider["github"]); got != 2 {
 		t.Fatalf("expected 2 repos loaded, got %d", got)
 	}

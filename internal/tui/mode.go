@@ -73,7 +73,7 @@ func (m *Model) renderElement(name string) (string, bool) {
 	case "action_menu":
 		return footerStyle.Render(m.footerText()), true
 	case "switch_hint":
-		return footerStyle.Render("enter: clone & switch  esc: back"), true
+		return footerStyle.Render("enter: clone & switch  ?: about  esc: back"), true
 	default:
 		return "", false
 	}

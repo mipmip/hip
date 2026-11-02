@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -34,6 +35,10 @@ func (m *Model) View() string {
 
 	if m.prompt != nil {
 		return m.promptView()
+	}
+
+	if m.about {
+		return m.aboutView()
 	}
 
 	if m.nav == levelDetail {
@@ -108,6 +113,19 @@ func (m *Model) cloneModalView() string {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box)
 	}
 	return box
+}
+
+// aboutView renders the about popup: version, build, license, source URL and
+// credits in the shared centered modal frame.
+func (m *Model) aboutView() string {
+	body := titleStyle.Render("hip "+m.version) + "\n\n" +
+		fmt.Sprintf("version   %s\n", m.version) +
+		fmt.Sprintf("build     %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH) +
+		"license   MIT, (c) 2026 Pim Snel\n" +
+		"github    github.com/mipmip/hip\n" +
+		"credits   Pim Snel, et al\n\n" +
+		dimStyle.Render("? or esc: close")
+	return centerBox(m, body)
 }
 
 // headerText renders the breadcrumb / title for the current scope.
@@ -423,7 +441,7 @@ func (m *Model) detailViewportHeight() int {
 
 // detailFooterText renders the detail-view keybinding help bar.
 func (m *Model) detailFooterText() string {
-	return "up/down/pgup/pgdn: scroll  c: clone  o: open  r: refresh  esc: back  q: quit"
+	return "up/down/pgup/pgdn: scroll  c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
 }
 
 // footerText renders the keybinding help bar.
@@ -446,5 +464,5 @@ func (m *Model) footerText() string {
 	return "up/down: move  pgup/pgdn ^u/^d: page  home/end: ends  " +
 		"enter: drill/details  /: filter  f/a/v: fork/archived/vis  x: selected  " + sortHelp +
 		"  space/tab: select  " + collHelp + "  " +
-		"c: clone  o: open  r: refresh  esc: back  q: quit"
+		"c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
 }

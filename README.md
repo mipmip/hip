@@ -43,6 +43,7 @@ Build one from the TUI:
 | Key         | Where                | What it does                            |
 |-------------|----------------------|-----------------------------------------|
 | `/`         | repo list            | filter (fzf-style query)                |
+| `?`         | any view             | show the about popup                    |
 | `tab`       | repo list, filtering | select the row and move down            |
 | `shift+tab` | repo list, filtering | select the row and move up              |
 | `space`     | repo list            | select the row in place                 |

@@ -13,8 +13,8 @@ import (
 // is true it starts in the combined cross-provider flat view; when filter is
 // true it starts with the fuzzy filter already active and focused (filter
 // implies the flat view unless a collection scopes the list instead).
-func Run(cfg *config.Config, mode, collection string, flatList, filter bool) error {
-	m := New(cfg)
+func Run(cfg *config.Config, version, mode, collection string, flatList, filter bool) error {
+	m := New(cfg, version)
 	if err := m.applyLaunchOptions(mode, collection, flatList, filter); err != nil {
 		return err
 	}

@@ -89,7 +89,7 @@ func runTUI(args []string) error {
 	if err != nil {
 		return err
 	}
-	return tui.Run(cfg, *mode, *collection, *flatList, *filter)
+	return tui.Run(cfg, resolveVersion(), *mode, *collection, *flatList, *filter)
 }
 
 // runConfig handles the `config` subcommand: `path` and `check`.

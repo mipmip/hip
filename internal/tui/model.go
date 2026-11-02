@@ -125,6 +125,8 @@ type syncerResult struct {
 // Model is the root Bubble Tea model.
 type Model struct {
 	cfg *config.Config
+	// version is the resolved binary version shown in the about popup.
+	version string
 
 	// providers is the configured provider list.
 	providers []*config.Provider
@@ -179,6 +181,8 @@ type Model struct {
 	picker *collPicker
 	// prompt holds the rename / delete-collection modal state; nil when closed.
 	prompt *collPrompt
+	// about reports whether the about popup is open.
+	about bool
 
 	// cursor is the highlighted row index into the currently visible list.
 	cursor int
@@ -280,10 +284,12 @@ type Model struct {
 }
 
 // New builds a Model from the configuration, loading the per-provider caches.
-// It resolves each repo's clone target and cloned state up front.
-func New(cfg *config.Config) *Model {
+// It resolves each repo's clone target and cloned state up front. version is the
+// resolved binary version (ldflags override or embedded fallback).
+func New(cfg *config.Config, version string) *Model {
 	m := &Model{
 		cfg:              cfg,
+		version:          version,
 		reposByProvider:  map[string][]repoItem{},
 		ownersByProvider: map[string][]string{},
 		fetchedOwners:    map[string]map[string]bool{},

@@ -279,6 +279,14 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handlePromptKey(msg)
 	}
 
+	// About popup: `?` or Esc closes it; every other key is swallowed.
+	if m.about {
+		if msg.Type == tea.KeyEsc || msg.String() == "?" {
+			m.about = false
+		}
+		return m, nil
+	}
+
 	// Filter-input mode: capture typing; Enter/Esc leave the mode.
 	if m.filtering {
 		switch msg.Type {
@@ -328,6 +336,14 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.offset = 0
 		}
 		return m, cmd
+	}
+
+	// The about popup is global: `?` opens it from every level and mode, before
+	// the detail/list key maps claim the key. Filtering is handled above, where
+	// `?` stays a literal query character.
+	if msg.String() == "?" {
+		m.about = true
+		return m, nil
 	}
 
 	// The detail view has its own key map (scroll the README, clone, open,
