@@ -1,11 +1,11 @@
 ---
 # skull2-f4m3
 title: 'sync: an empty upstream repository is reported as failed'
-status: in-progress
+status: completed
 type: bug
 priority: high
 created_at: 2026-11-02T11:13:20Z
-updated_at: 2026-11-02T21:02:22Z
+updated_at: 2026-11-02T21:10:24Z
 ---
 
 `hip sync` reports a repository as failed when the repository has no commits
@@ -76,3 +76,22 @@ Covers git checkouts and jj colocated checkouts alike, since both have a
 - e2e: create a bare empty repo as the remote, clone, sync again; expect
   skipped and exit 0. Then push a commit to the bare repo and sync; expect
   updated.
+
+
+
+## Summary of Changes
+
+Shipped as OpenSpec change `sync-empty-upstream` (archived as
+`2026-11-02-sync-empty-upstream`).
+
+`hip sync` now lists the fetched remote branches before fast-forwarding. A
+repository whose upstream has no branches is reported as skipped with
+`empty repository upstream: <owner>/<repo>` instead of failing, so an empty
+forge repository no longer makes the backup unit exit non-zero. The default
+branch is taken from the cache when it exists upstream, otherwise from the
+remote HEAD, and an unresolvable branch is still a hard failure.
+
+Covered by syncer unit tests (empty remote, stale default branch, cached
+branch, unresolvable branch, branch-listing error), an e2e flow (empty clone,
+skipped sync, first upstream commit, updated sync), and a `runSync` test that
+asserts exit 0 and the skipped count. Coverage: 82.4% overall, syncer 83.1%.
