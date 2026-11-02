@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -41,12 +42,18 @@ func git(t *testing.T, dir string, args ...string) {
 	}
 }
 
-func makeBare(t *testing.T) string {
+func makeEmptyBare(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	bare := filepath.Join(root, "remote.git")
 	git(t, root, "init", "--bare", "-b", "main", bare)
-	work := filepath.Join(root, "seed")
+	return bare
+}
+
+func addCommitToBare(t *testing.T, bare string) {
+	t.Helper()
+	root := t.TempDir()
+	work := filepath.Join(root, "push")
 	git(t, root, "clone", bare, work)
 	if err := os.WriteFile(filepath.Join(work, "README.md"), []byte("hi\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -54,7 +61,36 @@ func makeBare(t *testing.T) string {
 	git(t, work, "add", ".")
 	git(t, work, "commit", "-m", "init")
 	git(t, work, "push", "origin", "main")
+}
+
+func makeBare(t *testing.T) string {
+	t.Helper()
+	bare := makeEmptyBare(t)
+	addCommitToBare(t, bare)
 	return bare
+}
+
+func captureStdout(t *testing.T, fn func() error) (string, error) {
+	t.Helper()
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = w
+	defer func() { os.Stdout = old }()
+	runErr := fn()
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return string(out), runErr
 }
 
 // TestRunSyncEndToEnd drives runSync with XDG dirs pointed at temp locations and
@@ -101,6 +137,71 @@ func TestRunSyncEndToEnd(t *testing.T) {
 
 	if err := runSync([]string{"--no-refresh"}); err != nil {
 		t.Fatalf("runSync: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(base, "acme", "widget", ".git")); err != nil {
+		t.Fatalf("expected clone: %v", err)
+	}
+}
+
+func TestRunSyncEmptyUpstream(t *testing.T) {
+	gitEnvT(t)
+	bare := makeEmptyBare(t)
+
+	cfgHome := t.TempDir()
+	cacheHome := t.TempDir()
+	base := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfgHome)
+	t.Setenv("XDG_CACHE_HOME", cacheHome)
+
+	cfgDir := filepath.Join(cfgHome, "hip")
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfgYAML := "base_dir: " + base + "\n" +
+		"clone_pattern_tpl: \"{{.BaseDir}}/{{.Owner}}/{{.Repo}}\"\n" +
+		"providers:\n" +
+		"  - name: test\n" +
+		"    type: github\n" +
+		"    short: gh\n" +
+		"    username: me\n" +
+		"    clone_protocol: ssh\n"
+	if err := os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(cfgYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	c := cache.Cache{FetchedAt: time.Now().UTC(), Repos: []provider.Repo{{
+		Owner: "acme", Name: "widget", SSHURL: bare, DefaultBranch: "main",
+	}}}
+	if err := cache.Save("test", c); err != nil {
+		t.Fatal(err)
+	}
+
+	out1, err := captureStdout(t, func() error { return runSync([]string{"--no-refresh"}) })
+	if err != nil {
+		t.Fatalf("first runSync: %v\n%s", err, out1)
+	}
+	if !strings.Contains(out1, "1 cloned") || !strings.Contains(out1, "0 failed") {
+		t.Fatalf("first run summary = %q, want 1 cloned and 0 failed", out1)
+	}
+
+	out2, err := captureStdout(t, func() error { return runSync([]string{"--no-refresh"}) })
+	if err != nil {
+		t.Fatalf("second runSync: %v\n%s", err, out2)
+	}
+	if !strings.Contains(out2, "1 skipped") || !strings.Contains(out2, "0 failed") {
+		t.Fatalf("second run summary = %q, want 1 skipped and 0 failed", out2)
+	}
+	if !strings.Contains(out2, "empty repository upstream: acme/widget") {
+		t.Fatalf("second run does not name the empty upstream: %q", out2)
+	}
+
+	addCommitToBare(t, bare)
+	out3, err := captureStdout(t, func() error { return runSync([]string{"--no-refresh"}) })
+	if err != nil {
+		t.Fatalf("third runSync: %v\n%s", err, out3)
+	}
+	if !strings.Contains(out3, "1 updated") || !strings.Contains(out3, "0 failed") {
+		t.Fatalf("third run summary = %q, want 1 updated and 0 failed", out3)
 	}
 	if _, err := os.Stat(filepath.Join(base, "acme", "widget", ".git")); err != nil {
 		t.Fatalf("expected clone: %v", err)

@@ -7,6 +7,7 @@ package syncer
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/mipmip/hip/internal/clonepath"
 	"github.com/mipmip/hip/internal/config"
@@ -22,7 +23,8 @@ const (
 	ActionCloned Action = "cloned"
 	// ActionUpdated means an existing clean clone was fast-forwarded.
 	ActionUpdated Action = "updated"
-	// ActionSkipped means an existing dirty clone was left untouched.
+	// ActionSkipped means an existing clone was left untouched, either because
+	// it has a dirty working tree or because its upstream has no branches yet.
 	ActionSkipped Action = "skipped"
 	// ActionFailed means the repository could not be cloned or updated.
 	ActionFailed Action = "failed"
@@ -281,14 +283,31 @@ func (e *Engine) syncRepo(ctx context.Context, p *config.Provider, r provider.Re
 		return res
 	}
 
+	branches, err := e.Git.RemoteBranches(ctx, target)
+	if err != nil {
+		res.Action = ActionFailed
+		res.Err = fmt.Errorf("listing remote branches: %w", err)
+		return res
+	}
+	if len(branches) == 0 {
+		res.Action = ActionSkipped
+		res.Warning = fmt.Sprintf("empty repository upstream: %s/%s", r.Owner, r.Name)
+		return res
+	}
+
 	branch := r.DefaultBranch
-	if branch == "" {
+	if branch == "" || !slices.Contains(branches, branch) {
 		branch, err = e.Git.CurrentDefaultBranch(ctx, target)
 		if err != nil {
 			res.Action = ActionFailed
 			res.Err = fmt.Errorf("resolving default branch: %w", err)
 			return res
 		}
+	}
+	if !slices.Contains(branches, branch) {
+		res.Action = ActionFailed
+		res.Err = fmt.Errorf("default branch %q not found upstream", branch)
+		return res
 	}
 
 	if err := e.Git.FastForward(ctx, target, branch); err != nil {

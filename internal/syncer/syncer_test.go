@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -229,18 +230,20 @@ func TestSyncFallsBackToRemoteHead(t *testing.T) {
 // --- Fake Git runner tests for decision logic ---
 
 type fakeGit struct {
-	repos   map[string]bool // dir -> exists
-	dirty   map[string]bool
-	cloned  []string
-	fetched []string
-	ffed    []string
+	repos          map[string]bool // dir -> exists
+	dirty          map[string]bool
+	remoteBranches map[string][]string // dir -> origin branch names
+	cloned         []string
+	fetched        []string
+	ffed           []string
 
-	cloneErr error
-	dirtyErr error
-	fetchErr error
-	ffErr    error
-	defBr    string
-	defErr   error
+	cloneErr    error
+	dirtyErr    error
+	fetchErr    error
+	branchesErr error
+	ffErr       error
+	defBr       string
+	defErr      error
 }
 
 func (f *fakeGit) Clone(_ context.Context, url, dir string) error {
@@ -257,6 +260,9 @@ func (f *fakeGit) Clone(_ context.Context, url, dir string) error {
 func (f *fakeGit) Fetch(_ context.Context, dir string) error {
 	f.fetched = append(f.fetched, dir)
 	return f.fetchErr
+}
+func (f *fakeGit) RemoteBranches(_ context.Context, dir string) ([]string, error) {
+	return f.remoteBranches[dir], f.branchesErr
 }
 func (f *fakeGit) FastForward(_ context.Context, dir, branch string) error {
 	f.ffed = append(f.ffed, dir+"@"+branch)
@@ -339,7 +345,7 @@ func TestFakeFetchAndFFErrors(t *testing.T) {
 	cfg, p := fakeCfg()
 	dir := "/base/o/r"
 
-	f := &fakeGit{repos: map[string]bool{dir: true}, fetchErr: errors.New("net")}
+	f := &fakeGit{repos: map[string]bool{dir: true}, remoteBranches: map[string][]string{dir: {"main"}}, fetchErr: errors.New("net")}
 	sum := NewEngine(f, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
 		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
 	}})
@@ -347,7 +353,7 @@ func TestFakeFetchAndFFErrors(t *testing.T) {
 		t.Fatalf("want failed on fetch error, got %+v", sum)
 	}
 
-	f2 := &fakeGit{repos: map[string]bool{dir: true}, ffErr: errors.New("diverged")}
+	f2 := &fakeGit{repos: map[string]bool{dir: true}, remoteBranches: map[string][]string{dir: {"main"}}, ffErr: errors.New("diverged")}
 	sum2 := NewEngine(f2, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
 		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
 	}})
@@ -359,7 +365,7 @@ func TestFakeFetchAndFFErrors(t *testing.T) {
 func TestFakeDefaultBranchFallback(t *testing.T) {
 	cfg, p := fakeCfg()
 	dir := "/base/o/r"
-	f := &fakeGit{repos: map[string]bool{dir: true}, defBr: "trunk"}
+	f := &fakeGit{repos: map[string]bool{dir: true}, remoteBranches: map[string][]string{dir: {"trunk"}}, defBr: "trunk"}
 	eng := NewEngine(f, cfg)
 	sum := eng.SyncProvider(context.Background(), p, []provider.Repo{{
 		Owner: "o", Name: "r", SSHURL: "url", // empty DefaultBranch
@@ -372,12 +378,100 @@ func TestFakeDefaultBranchFallback(t *testing.T) {
 	}
 
 	// Fallback error path.
-	f2 := &fakeGit{repos: map[string]bool{dir: true}, defErr: errors.New("no HEAD")}
+	f2 := &fakeGit{repos: map[string]bool{dir: true}, remoteBranches: map[string][]string{dir: {"main"}}, defErr: errors.New("no HEAD")}
 	sum2 := NewEngine(f2, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
 		Owner: "o", Name: "r", SSHURL: "url",
 	}})
 	if sum2.Failed != 1 {
 		t.Fatalf("want failed on default-branch fallback error, got %+v", sum2)
+	}
+}
+
+func TestFakeEmptyUpstreamSkips(t *testing.T) {
+	cfg, p := fakeCfg()
+	dir := "/base/o/r"
+	f := &fakeGit{repos: map[string]bool{dir: true}, remoteBranches: map[string][]string{dir: {}}}
+	sum := NewEngine(f, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
+		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
+	}})
+	if sum.Skipped != 1 || sum.Failed != 0 || sum.Updated != 0 {
+		t.Fatalf("want 1 skipped, got %+v", sum)
+	}
+	w := sum.Results[0].Warning
+	if !strings.Contains(w, "empty repository upstream") || !strings.Contains(w, "o/r") {
+		t.Fatalf("warning = %q, want empty upstream naming the repo", w)
+	}
+	if len(f.ffed) != 0 {
+		t.Fatalf("empty upstream should not fast-forward, got %v", f.ffed)
+	}
+}
+
+func TestFakeStaleDefaultBranchUsesRemoteHead(t *testing.T) {
+	cfg, p := fakeCfg()
+	dir := "/base/o/r"
+	f := &fakeGit{
+		repos:          map[string]bool{dir: true},
+		remoteBranches: map[string][]string{dir: {"trunk"}},
+		defBr:          "trunk",
+	}
+	sum := NewEngine(f, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
+		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
+	}})
+	if sum.Updated != 1 {
+		t.Fatalf("want updated via remote HEAD, got %+v", sum)
+	}
+	if len(f.ffed) != 1 || f.ffed[0] != dir+"@trunk" {
+		t.Fatalf("expected ff on trunk, got %v", f.ffed)
+	}
+}
+
+func TestFakeCachedDefaultBranchWins(t *testing.T) {
+	cfg, p := fakeCfg()
+	dir := "/base/o/r"
+	f := &fakeGit{
+		repos:          map[string]bool{dir: true},
+		remoteBranches: map[string][]string{dir: {"main", "trunk"}},
+		defBr:          "trunk",
+	}
+	sum := NewEngine(f, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
+		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
+	}})
+	if sum.Updated != 1 {
+		t.Fatalf("want updated on cached branch, got %+v", sum)
+	}
+	if len(f.ffed) != 1 || f.ffed[0] != dir+"@main" {
+		t.Fatalf("expected ff on main, got %v", f.ffed)
+	}
+}
+
+func TestFakeUnresolvableDefaultBranchFails(t *testing.T) {
+	cfg, p := fakeCfg()
+	dir := "/base/o/r"
+	f := &fakeGit{
+		repos:          map[string]bool{dir: true},
+		remoteBranches: map[string][]string{dir: {"trunk"}},
+		defErr:         errors.New("no HEAD"),
+	}
+	sum := NewEngine(f, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
+		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
+	}})
+	if sum.Failed != 1 || sum.Results[0].Err == nil {
+		t.Fatalf("want failed on unresolvable branch, got %+v", sum)
+	}
+}
+
+func TestFakeRemoteBranchesErrorFails(t *testing.T) {
+	cfg, p := fakeCfg()
+	dir := "/base/o/r"
+	f := &fakeGit{repos: map[string]bool{dir: true}, branchesErr: errors.New("boom")}
+	sum := NewEngine(f, cfg).SyncProvider(context.Background(), p, []provider.Repo{{
+		Owner: "o", Name: "r", SSHURL: "url", DefaultBranch: "main",
+	}})
+	if sum.Failed != 1 || sum.Results[0].Err == nil {
+		t.Fatalf("want failed on branch listing error, got %+v", sum)
+	}
+	if !strings.Contains(sum.Results[0].Err.Error(), "listing remote branches") {
+		t.Fatalf("error should name the branch listing: %v", sum.Results[0].Err)
 	}
 }
 
@@ -511,6 +605,44 @@ func TestExecGitIsRepoAndDefaultBranch(t *testing.T) {
 	}
 	if err := g.Fetch(ctx, target); err != nil {
 		t.Fatalf("fetch: %v", err)
+	}
+}
+
+func TestExecGitRemoteBranches(t *testing.T) {
+	for _, kv := range [][2]string{
+		{"GIT_CONFIG_GLOBAL", "/dev/null"}, {"GIT_CONFIG_SYSTEM", "/dev/null"},
+	} {
+		t.Setenv(kv[0], kv[1])
+	}
+	g := NewExecGit()
+	ctx := context.Background()
+
+	bare := makeBareRemote(t)
+	target := filepath.Join(t.TempDir(), "clone")
+	if err := g.Clone(ctx, bare, target); err != nil {
+		t.Fatalf("clone: %v", err)
+	}
+	branches, err := g.RemoteBranches(ctx, target)
+	if err != nil {
+		t.Fatalf("remote branches: %v", err)
+	}
+	if !slices.Equal(branches, []string{"main"}) {
+		t.Fatalf("branches = %v, want [main]", branches)
+	}
+
+	emptyRoot := t.TempDir()
+	emptyBare := filepath.Join(emptyRoot, "empty.git")
+	runGit(t, emptyRoot, "init", "--bare", "-b", "main", emptyBare)
+	emptyClone := filepath.Join(emptyRoot, "clone")
+	if err := g.Clone(ctx, emptyBare, emptyClone); err != nil {
+		t.Fatalf("clone empty: %v", err)
+	}
+	branches, err = g.RemoteBranches(ctx, emptyClone)
+	if err != nil {
+		t.Fatalf("remote branches on empty remote: %v", err)
+	}
+	if len(branches) != 0 {
+		t.Fatalf("empty remote branches = %v, want none", branches)
 	}
 }
 

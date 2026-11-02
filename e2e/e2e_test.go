@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -269,6 +270,77 @@ func TestRefreshBrowseClone(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(expected, "README.md")); err != nil {
 		t.Fatalf("README.md missing from clone: %v", err)
+	}
+}
+
+// TestSyncEmptyUpstreamThenFirstCommit proves an empty upstream is skipped
+// rather than failed, and that the next upstream commit is fast-forwarded.
+func TestSyncEmptyUpstreamThenFirstCommit(t *testing.T) {
+	hermeticGitEnv(t)
+
+	root := t.TempDir()
+	bare := filepath.Join(root, "empty.git")
+	runGit(t, root, "init", "--bare", "-b", "main", bare)
+	bareURL := "file://" + bare
+
+	base := t.TempDir()
+	cfg := &config.Config{
+		BaseDir:         base,
+		ClonePatternTpl: "{{.BaseDir}}/{{.Short}}.{{.OwnerLower}}/{{.Repo}}",
+		Providers: []config.Provider{{
+			Name:          "github-personal",
+			Type:          config.ProviderGitHub,
+			Short:         "gh",
+			CloneProtocol: config.ProtocolHTTPS,
+		}},
+	}
+	p := &cfg.Providers[0]
+
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	repos := []provider.Repo{{
+		Owner:         "acme",
+		Name:          "widget",
+		SSHURL:        bareURL,
+		HTTPSURL:      bareURL,
+		WebURL:        "https://example.test/acme/widget",
+		DefaultBranch: "main",
+	}}
+	if err := cache.Save(p.Name, cache.Cache{FetchedAt: time.Now().UTC(), Repos: repos}); err != nil {
+		t.Fatalf("cache.Save: %v", err)
+	}
+
+	eng := syncer.NewEngine(syncer.NewExecGit(), cfg)
+	ctx := context.Background()
+	c, ok, err := cache.LoadOrEmpty(p.Name)
+	if err != nil || !ok {
+		t.Fatalf("cache.LoadOrEmpty: ok=%v err=%v", ok, err)
+	}
+	cached := provider.FilterRepos(p, c.Repos)
+
+	sum1 := eng.SyncProvider(ctx, p, cached)
+	if sum1.Cloned != 1 || sum1.Failed != 0 {
+		t.Fatalf("first run: want 1 cloned, got %+v", sum1)
+	}
+	target := filepath.Join(base, "gh.acme", "widget")
+	if _, err := os.Stat(filepath.Join(target, ".git")); err != nil {
+		t.Fatalf("first run did not create a checkout at %s: %v", target, err)
+	}
+
+	sum2 := eng.SyncProvider(ctx, p, cached)
+	if sum2.Skipped != 1 || sum2.Failed != 0 || sum2.Updated != 0 {
+		t.Fatalf("second run: want 1 skipped, got %+v", sum2)
+	}
+	if w := sum2.Results[0].Warning; !strings.Contains(w, "empty repository upstream: acme/widget") {
+		t.Fatalf("second run warning = %q, want empty upstream naming the repo", w)
+	}
+
+	addRemoteCommit(t, bare)
+	sum3 := eng.SyncProvider(ctx, p, cached)
+	if sum3.Updated != 1 || sum3.Failed != 0 {
+		t.Fatalf("third run: want 1 updated, got %+v", sum3)
+	}
+	if _, err := os.Stat(filepath.Join(target, "NEW.md")); err != nil {
+		t.Fatalf("third run did not fast-forward (NEW.md missing): %v", err)
 	}
 }
 

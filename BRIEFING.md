@@ -179,7 +179,10 @@ line-oriented logging; non-zero on failure).
 For each configured owner's repos:
 - If target dir absent → clone using `clone_protocol` at the templated path.
 - If present and a git repo → `git fetch` + fast-forward-only pull on the
-  default branch; never force, never touch dirty trees (skip + warn).
+  default branch; resolve that branch against the fetched remote refs (cached
+  name when present, otherwise the remote HEAD). Never force, never touch dirty
+  trees (skip + warn). A remote with no branches is skipped with a warning, not
+  reported as failed.
 - Report a per-provider summary (cloned / updated / skipped / failed).
 
 ## 11. Milestones & epics (beans + OpenSpec)

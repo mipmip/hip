@@ -16,6 +16,12 @@ Release as 2.0.0: this release breaks existing configuration and environment.
   `~/.cache/hip`, auth env prefix `HIP_<PROVIDER>_TOKEN`. The old names are not
   read anymore.
 
+### Fixed
+
+- `hip sync` no longer reports a repository with an empty upstream as failed.
+  It skips the repository with a warning and fast-forwards normally once the
+  upstream receives its first commit.
+
 ### Migration
 
 ```bash

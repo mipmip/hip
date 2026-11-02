@@ -20,6 +20,9 @@ type Git interface {
 	Clone(ctx context.Context, url, dir string) error
 	// Fetch runs `git fetch` in dir.
 	Fetch(ctx context.Context, dir string) error
+	// RemoteBranches returns the branch names under origin (e.g. "main"),
+	// excluding the origin/HEAD symref.
+	RemoteBranches(ctx context.Context, dir string) ([]string, error)
 	// FastForward runs `git merge --ff-only origin/<branch>` in dir.
 	FastForward(ctx context.Context, dir, branch string) error
 	// IsDirty reports whether `git status --porcelain` is non-empty in dir.
@@ -148,6 +151,28 @@ func (g *ExecGit) CloneProgress(ctx context.Context, url, dir string, emit func(
 func (g *ExecGit) Fetch(ctx context.Context, dir string) error {
 	_, err := g.run(ctx, dir, "fetch")
 	return err
+}
+
+// RemoteBranches returns the branch names under origin, excluding origin/HEAD.
+func (g *ExecGit) RemoteBranches(ctx context.Context, dir string) ([]string, error) {
+	out, err := g.run(ctx, dir, "for-each-ref", "--format=%(refname)", "refs/remotes/origin")
+	if err != nil {
+		return nil, err
+	}
+	const prefix = "refs/remotes/origin/"
+	var branches []string
+	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+		name := strings.TrimSpace(line)
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		branch := strings.TrimPrefix(name, prefix)
+		if branch == "" || branch == "HEAD" {
+			continue
+		}
+		branches = append(branches, branch)
+	}
+	return branches, nil
 }
 
 // FastForward runs `git merge --ff-only origin/<branch>` in dir.
