@@ -85,3 +85,16 @@ func TestFilterLetterKeysStillType(t *testing.T) {
 		t.Fatalf("expected 'jk' typed into filter, got %q", m.filter.Value())
 	}
 }
+
+func TestFilterGGStillType(t *testing.T) {
+	m := drillToMipmipRepos(t)
+	send(m, key("/"))
+	send(m, key("g"))
+	send(m, key("G"))
+	if m.filter.Value() != "gG" {
+		t.Fatalf("expected 'gG' typed into filter, got %q", m.filter.Value())
+	}
+	if !m.filtering {
+		t.Fatal("g/G must not leave filter mode")
+	}
+}

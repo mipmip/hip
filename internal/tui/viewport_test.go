@@ -240,6 +240,34 @@ func TestUpdateEndHomePgDnPgUpCtrlDU(t *testing.T) {
 	if m.cursor != 0 {
 		t.Fatalf("Ctrl+U cursor = %d, want 0", m.cursor)
 	}
+
+	// G -> last row, matching End.
+	send(m, key("G"))
+	_ = m.View()
+	if m.cursor != 49 || m.offset != 44 {
+		t.Fatalf("G cursor/offset = %d/%d, want 49/44", m.cursor, m.offset)
+	}
+
+	// g -> first row, matching Home.
+	send(m, key("g"))
+	_ = m.View()
+	if m.cursor != 0 || m.offset != 0 {
+		t.Fatalf("g cursor/offset = %d/%d, want 0/0", m.cursor, m.offset)
+	}
+
+	// Ctrl+F -> cursor += visible(6) => 6, matching PgDn.
+	send(m, tea.KeyMsg{Type: tea.KeyCtrlF})
+	_ = m.View()
+	if m.cursor != 6 {
+		t.Fatalf("Ctrl+F cursor = %d, want 6", m.cursor)
+	}
+
+	// Ctrl+B -> cursor -= 6 => 0, matching PgUp.
+	send(m, tea.KeyMsg{Type: tea.KeyCtrlB})
+	_ = m.View()
+	if m.cursor != 0 {
+		t.Fatalf("Ctrl+B cursor = %d, want 0", m.cursor)
+	}
 }
 
 func TestUpdateOffsetResetsOnDrill(t *testing.T) {
@@ -286,5 +314,17 @@ func TestVisibleSliceInView(t *testing.T) {
 	}
 	if !strings.Contains(out, nameFor(49)) {
 		t.Fatalf("expected windowed view to include last row")
+	}
+}
+
+func TestNavigationHints(t *testing.T) {
+	m := newBigProviderModel(t, 10)
+	for _, want := range []string{"g/G", "home/end", "^f/^b"} {
+		if !strings.Contains(m.footerText(), want) {
+			t.Fatalf("list footer missing %q: %q", want, m.footerText())
+		}
+		if !strings.Contains(m.detailFooterText(), want) {
+			t.Fatalf("detail footer missing %q: %q", want, m.detailFooterText())
+		}
 	}
 }

@@ -365,11 +365,11 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.moveCursor(1)
 		return m, m.schedulePrefetch()
 
-	case "pgdown":
+	case "pgdown", "ctrl+f":
 		m.moveCursor(m.pageStep())
 		return m, m.schedulePrefetch()
 
-	case "pgup":
+	case "pgup", "ctrl+b":
 		m.moveCursor(-m.pageStep())
 		return m, m.schedulePrefetch()
 
@@ -381,12 +381,12 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.moveCursor(-m.halfPageStep())
 		return m, m.schedulePrefetch()
 
-	case "home":
+	case "home", "g":
 		m.cursor = 0
 		m.clampCursor()
 		return m, m.schedulePrefetch()
 
-	case "end":
+	case "end", "G":
 		m.cursor = m.rowCount() - 1
 		m.clampCursor()
 		return m, m.schedulePrefetch()
@@ -851,6 +851,22 @@ func (m *Model) handleDetailKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "r":
 		return m.refreshDetail()
+
+	case "g", "home":
+		m.readme.GotoTop()
+		return m, nil
+
+	case "G", "end":
+		m.readme.GotoBottom()
+		return m, nil
+
+	case "ctrl+f":
+		m.readme.PageDown()
+		return m, nil
+
+	case "ctrl+b":
+		m.readme.PageUp()
+		return m, nil
 	}
 
 	// Everything else scrolls the README viewport (up/down/pgup/pgdn/home/end...).

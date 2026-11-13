@@ -88,6 +88,59 @@ func TestEnterOpensDetailView(t *testing.T) {
 	}
 }
 
+func TestDetailVimJumpAndPageKeys(t *testing.T) {
+	m, _ := newDetailTestModel(t)
+	m.nav = levelDetail
+	m.detailLoaded = true
+	m.readme = viewport.New(40, 5)
+	m.readme.SetContent(strings.Repeat("line\n", 100))
+
+	if !m.readme.AtTop() {
+		t.Fatal("expected viewport at top")
+	}
+
+	send(m, key("G"))
+	if !m.readme.AtBottom() {
+		t.Fatal("G should jump to the last line")
+	}
+
+	send(m, key("g"))
+	if !m.readme.AtTop() {
+		t.Fatal("g should jump to the first line")
+	}
+
+	send(m, key("end"))
+	if !m.readme.AtBottom() {
+		t.Fatal("End should jump to the last line")
+	}
+
+	send(m, key("home"))
+	if !m.readme.AtTop() {
+		t.Fatal("Home should jump to the first line")
+	}
+
+	send(m, key("ctrl+f"))
+	afterPageDown := m.readme.YOffset
+	if afterPageDown == 0 {
+		t.Fatal("Ctrl+F should page down")
+	}
+
+	send(m, key("ctrl+b"))
+	if m.readme.YOffset >= afterPageDown {
+		t.Fatalf("Ctrl+B should page up: offset %d -> %d", afterPageDown, m.readme.YOffset)
+	}
+
+	send(m, key("f"))
+	if m.readme.YOffset == 0 {
+		t.Fatal("f should still page down")
+	}
+
+	send(m, key("b"))
+	if m.readme.YOffset != 0 {
+		t.Fatalf("b should page back to the top, offset = %d", m.readme.YOffset)
+	}
+}
+
 func TestDetailFetchCachesAndReuses(t *testing.T) {
 	m, p := newDetailTestModel(t)
 	it, _ := m.currentRepo()

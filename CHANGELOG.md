@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Vim-style `g`/`G` jumps and `Ctrl+F`/`Ctrl+B` paging in the TUI lists and
+  detail pane.
+
 ## [2.0.0] - 2026-11-02
 
 Release as 2.0.0: this release breaks existing configuration and environment.

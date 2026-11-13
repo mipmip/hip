@@ -32,6 +32,16 @@ nix flake check        # build + tests
 Configuration lives in `~/.config/hip/config.yaml`; cached repo metadata in
 `~/.cache/hip/`.
 
+## Navigation
+
+| Key             | Where            | What it does            |
+|-----------------|------------------|-------------------------|
+| `j` / `k`       | repo list        | move one row down/up    |
+| `g` / `G`       | repo list, detail| jump to first/last      |
+| `home` / `end`  | repo list, detail| jump to first/last      |
+| `ctrl+f` / `ctrl+b` | repo list, detail | page down/up        |
+| `ctrl+d` / `ctrl+u` | repo list    | half-page down/up       |
+
 ## Collections
 
 A collection is a named group of repositories you assemble yourself, say the

@@ -441,7 +441,7 @@ func (m *Model) detailViewportHeight() int {
 
 // detailFooterText renders the detail-view keybinding help bar.
 func (m *Model) detailFooterText() string {
-	return "up/down/pgup/pgdn: scroll  c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
+	return "up/down home/end g/G pgup/pgdn ^f/^b: scroll  c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
 }
 
 // footerText renders the keybinding help bar.
@@ -461,7 +461,7 @@ func (m *Model) footerText() string {
 	if m.selColl != "" {
 		collHelp += "  d: remove from collection"
 	}
-	return "up/down: move  pgup/pgdn ^u/^d: page  home/end: ends  " +
+	return "up/down: move  g/G home/end: ends  pgup/pgdn ^f/^b: page  ^u/^d: half  " +
 		"enter: drill/details  /: filter  f/a/v: fork/archived/vis  x: selected  " + sortHelp +
 		"  space/tab: select  " + collHelp + "  " +
 		"c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
