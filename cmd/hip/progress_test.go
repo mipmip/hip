@@ -36,6 +36,10 @@ func (f *fakeFetchClient) RepoDetails(_ context.Context, _, _ string) (provider.
 
 func (f *fakeFetchClient) Readme(_ context.Context, _, _ string) (string, error) { return "", nil }
 
+func (f *fakeFetchClient) CreateRepo(context.Context, provider.CreateRepoOptions) (provider.Repo, error) {
+	return provider.Repo{}, nil
+}
+
 func (f *fakeFetchClient) ListRepos(ctx context.Context, owners []string) ([]provider.Repo, error) {
 	owner := ""
 	if len(owners) > 0 {

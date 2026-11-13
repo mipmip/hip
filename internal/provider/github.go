@@ -48,6 +48,23 @@ type ghRepo struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+// toRepo normalizes a GitHub repository response into the shared model.
+func (r ghRepo) toRepo() Repo {
+	return Repo{
+		Owner:         r.Owner.Login,
+		Name:          r.Name,
+		Description:   r.Description,
+		SSHURL:        r.SSHURL,
+		HTTPSURL:      r.CloneURL,
+		WebURL:        r.HTMLURL,
+		DefaultBranch: r.DefaultBranch,
+		Archived:      r.Archived,
+		Fork:          r.Fork,
+		Visibility:    visibilityFromPrivate(r.Private),
+		UpdatedAt:     r.UpdatedAt,
+	}
+}
+
 // NewGitHub builds a GitHub client. httpClient and the resolved base URL are
 // injectable so tests can point at an httptest.Server. A nil httpClient uses
 // http.DefaultClient.
@@ -123,19 +140,7 @@ func (g *GitHub) FetchOwner(ctx context.Context, emit fetch.Emit, owner string) 
 		}
 		items := make([]Repo, 0, len(pageRepos))
 		for _, r := range pageRepos {
-			items = append(items, Repo{
-				Owner:         r.Owner.Login,
-				Name:          r.Name,
-				Description:   r.Description,
-				SSHURL:        r.SSHURL,
-				HTTPSURL:      r.CloneURL,
-				WebURL:        r.HTMLURL,
-				DefaultBranch: r.DefaultBranch,
-				Archived:      r.Archived,
-				Fork:          r.Fork,
-				Visibility:    visibilityFromPrivate(r.Private),
-				UpdatedAt:     r.UpdatedAt,
-			})
+			items = append(items, r.toRepo())
 		}
 		out := fetch.Page[Repo]{Items: items}
 		if page == 1 {
@@ -284,6 +289,67 @@ func (g *GitHub) Readme(ctx context.Context, owner, name string) (string, error)
 		return string(decoded), nil
 	}
 	return r.Content, nil
+}
+
+// ghCreateRepo is the request body for GitHub repository creation.
+type ghCreateRepo struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Private     bool   `json:"private"`
+	AutoInit    bool   `json:"auto_init"`
+}
+
+// CreateRepo creates an empty repository for the authenticated user or an
+// organization. The repository is pushed separately by the creator.
+func (g *GitHub) CreateRepo(ctx context.Context, opts CreateRepoOptions) (Repo, error) {
+	opts, err := normalizeCreateOptions(opts)
+	if err != nil {
+		return Repo{}, err
+	}
+	token, err := ResolveToken(&g.cfg, g.getter, g.env)
+	if err != nil {
+		return Repo{}, err
+	}
+
+	endpoint := "/user/repos"
+	if opts.Owner != g.cfg.Username {
+		endpoint = fmt.Sprintf("/orgs/%s/repos", url.PathEscape(opts.Owner))
+	}
+	body, status, err := postJSON(ctx, g.client, g.base+endpoint, ghCreateRepo{
+		Name:        opts.Name,
+		Description: opts.Description,
+		Private:     opts.Visibility == VisibilityPrivate,
+		AutoInit:    false,
+	}, map[string]string{
+		"Authorization":        "Bearer " + token,
+		"Accept":               "application/vnd.github+json",
+		"X-GitHub-Api-Version": "2022-11-28",
+	})
+	if err != nil {
+		return Repo{}, fmt.Errorf("github: %s: %w", endpoint, err)
+	}
+	if status != http.StatusCreated {
+		return Repo{}, createHTTPError("github", endpoint, status, body,
+			createPermissionHint(config.ProviderGitHub, opts.Visibility))
+	}
+
+	var created ghRepo
+	if err := json.Unmarshal(body, &created); err != nil {
+		return Repo{}, fmt.Errorf("github: decoding created repository: %w", err)
+	}
+	out := created.toRepo()
+	if out.Owner == "" {
+		out.Owner = opts.Owner
+	}
+	if out.Name == "" {
+		out.Name = opts.Name
+	}
+	if out.Description == "" {
+		out.Description = opts.Description
+	}
+	out.Visibility = opts.Visibility
+	out.DefaultBranch = defaultBranchOrMain(out.DefaultBranch)
+	return out, nil
 }
 
 // nextLink extracts the rel="next" URL from an RFC 5988 Link header, or "".

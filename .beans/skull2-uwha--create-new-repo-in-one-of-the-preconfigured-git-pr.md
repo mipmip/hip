@@ -1,11 +1,11 @@
 ---
 # skull2-uwha
 title: create new repo in one of the preconfigured git providers
-status: completed
+status: in-progress
 type: feature
 priority: normal
 created_at: 2026-11-13T13:43:46Z
-updated_at: 2026-11-13T13:46:00Z
+updated_at: 2026-11-13T15:31:21Z
 ---
 
 - When more then one providers select which.

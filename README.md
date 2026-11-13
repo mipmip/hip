@@ -53,6 +53,7 @@ Build one from the TUI:
 | Key         | Where                | What it does                            |
 |-------------|----------------------|-----------------------------------------|
 | `/`         | repo list            | filter (fzf-style query)                |
+| `n`         | provider, owner, repo list | create a new repository          |
 | `?`         | any view             | show the about popup                    |
 | `tab`       | repo list, filtering | select the row and move down            |
 | `shift+tab` | repo list, filtering | select the row and move up              |
@@ -70,6 +71,12 @@ so they survive re-filtering: narrow, pick, retype, pick again. Because the
 repos you picked scroll out of view as the query changes, `x` cycles a
 `selected` facet (`all` → `only` → `hide`) that shows just what is in your
 basket; the position indicator also reports how many are selected in total.
+
+`n` starts the creation wizard. It asks for the provider and owner when they
+are not already known, then name, description, visibility, an optional README
+(opened in `$EDITOR`, falling back to `vi`), an optional license, and whether
+to check the repository out. HIP creates the remote empty, pushes the initial
+files as `main`, and adds the new row to the cache without a refresh.
 
 `A` opens a picker listing the existing collections with their member counts,
 plus a `+ new collection` entry that asks for a name. Browse collections from

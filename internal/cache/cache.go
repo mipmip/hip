@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mipmip/hip/internal/provider"
@@ -134,6 +135,18 @@ func (c *Cache) MarkOwnerFetched(owner string, repos []provider.Repo, fetchedAt 
 		}
 	}
 	c.Owners = append(c.Owners, OwnerState{Name: owner, FetchedAt: &ts})
+}
+
+// UpsertRepo adds repo to the cache, replacing an existing entry with the same
+// owner and name (ignoring case). Owner fetch state is left untouched.
+func (c *Cache) UpsertRepo(repo provider.Repo) {
+	for i, r := range c.Repos {
+		if strings.EqualFold(r.Owner, repo.Owner) && strings.EqualFold(r.Name, repo.Name) {
+			c.Repos[i] = repo
+			return
+		}
+	}
+	c.Repos = append(c.Repos, repo)
 }
 
 // UnfetchedOwners returns the names of owners that have been discovered but whose
@@ -276,4 +289,15 @@ func LoadOrEmpty(providerName string) (Cache, bool, error) {
 		return Cache{}, false, err
 	}
 	return c, true, nil
+}
+
+// AddRepo inserts repo into providerName's cache and saves it, preserving other
+// repositories and owner fetch state.
+func AddRepo(providerName string, repo provider.Repo) error {
+	c, _, err := LoadOrEmpty(providerName)
+	if err != nil {
+		return err
+	}
+	c.UpsertRepo(repo)
+	return Save(providerName, c)
 }

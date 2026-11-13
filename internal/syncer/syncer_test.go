@@ -323,7 +323,7 @@ func TestFakeHTTPSProtocolUsesHTTPSURL(t *testing.T) {
 	if sum.Cloned != 1 {
 		t.Fatalf("want cloned via https, got %+v", sum)
 	}
-	if u := cloneURL(p, provider.Repo{HTTPSURL: "https://x", SSHURL: "ssh://y"}); u != "https://x" {
+	if u := CloneURL(p, provider.Repo{HTTPSURL: "https://x", SSHURL: "ssh://y"}); u != "https://x" {
 		t.Fatalf("cloneURL https wrong: %q", u)
 	}
 }

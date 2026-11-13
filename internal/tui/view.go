@@ -37,6 +37,10 @@ func (m *Model) View() string {
 		return m.promptView()
 	}
 
+	if m.wizard != nil {
+		return m.wizardView()
+	}
+
 	if m.about {
 		return m.aboutView()
 	}
@@ -464,5 +468,5 @@ func (m *Model) footerText() string {
 	return "up/down: move  g/G home/end: ends  pgup/pgdn ^f/^b: page  ^u/^d: half  " +
 		"enter: drill/details  /: filter  f/a/v: fork/archived/vis  x: selected  " + sortHelp +
 		"  space/tab: select  " + collHelp + "  " +
-		"c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
+		"n: new repo  c: clone  o: open  r: refresh  ?: about  esc: back  q: quit"
 }

@@ -306,6 +306,103 @@ func TestMarkOwnerFetchedUpdatesOnlyThatOwner(t *testing.T) {
 	}
 }
 
+func TestAddRepoPreservesSiblingsAndFetchedState(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
+	var c Cache
+	c.SetOwners(now, []string{"acme", "other"})
+	c.MarkOwnerFetched("acme", []provider.Repo{{Owner: "acme", Name: "alpha"}}, now)
+	c.MarkOwnerFetched("other", []provider.Repo{
+		{Owner: "other", Name: "beta"},
+		{Owner: "other", Name: "gamma"},
+	}, now)
+	if err := Save("github", c); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AddRepo("github", provider.Repo{Owner: "acme", Name: "new", Description: "created"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load("github")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repos := got.ReposFor("acme"); len(repos) != 2 {
+		t.Fatalf("acme repos = %+v, want alpha and new", repos)
+	}
+	if repos := got.ReposFor("other"); len(repos) != 2 {
+		t.Fatalf("other repos = %+v, want beta and gamma", repos)
+	}
+	if !got.OwnerFetched("acme") || !got.OwnerFetched("other") {
+		t.Fatal("owner fetch state changed")
+	}
+}
+
+func TestAddRepoReplacesCaseInsensitive(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
+	var c Cache
+	c.SetOwners(now, []string{"Acme"})
+	c.MarkOwnerFetched("Acme", []provider.Repo{{
+		Owner: "Acme", Name: "Alpha", Description: "old",
+	}}, now)
+	if err := Save("github", c); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AddRepo("github", provider.Repo{Owner: "acme", Name: "alpha", Description: "new"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load("github")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Repos) != 1 {
+		t.Fatalf("repos = %+v, want one replacement", got.Repos)
+	}
+	if got.Repos[0].Owner != "acme" || got.Repos[0].Description != "new" {
+		t.Fatalf("replacement = %+v", got.Repos[0])
+	}
+}
+
+func TestAddRepoLeavesUnfetchedOwnerUnfetched(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	now := time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC)
+	var c Cache
+	c.SetOwners(now, []string{"acme"})
+	if err := Save("github", c); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AddRepo("github", provider.Repo{Owner: "acme", Name: "new"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load("github")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.OwnerFetched("acme") {
+		t.Fatal("owner should remain unfetched")
+	}
+	if repos := got.ReposFor("acme"); len(repos) != 1 || repos[0].Name != "new" {
+		t.Fatalf("acme repos = %+v", repos)
+	}
+}
+
+func TestAddRepoCreatesMissingCache(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	if err := AddRepo("codeberg", provider.Repo{Owner: "acme", Name: "new"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load("codeberg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repos := got.ReposFor("acme"); len(repos) != 1 || repos[0].Name != "new" {
+		t.Fatalf("acme repos = %+v", repos)
+	}
+}
+
 // TestCommitOnlyOnCompleteLeavesFailedOwnerUnfetched models the repo-cache
 // contract: an owner whose fetch failed/canceled (so MarkOwnerFetched is not
 // called for it) stays unfetched with no repos, while a completed owner commits.

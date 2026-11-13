@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The TUI can create a repository on a configured provider with `n`, including
+  an optional README, license and local checkout.
 - Vim-style `g`/`G` jumps and `Ctrl+F`/`Ctrl+B` paging in the TUI lists and
   detail pane.
 

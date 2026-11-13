@@ -49,6 +49,13 @@ func (f *fakeProvider) Readme(_ context.Context, _, _ string) (string, error) {
 	return f.readme, nil
 }
 
+func (f *fakeProvider) CreateRepo(_ context.Context, _ CreateRepoOptions) (Repo, error) {
+	if f.err != nil {
+		return Repo{}, f.err
+	}
+	return Repo{}, nil
+}
+
 func TestProviderInterfaceListRepos(t *testing.T) {
 	want := []Repo{
 		{Owner: "o", Name: "a", DefaultBranch: "main", UpdatedAt: time.Now()},

@@ -21,6 +21,7 @@ import (
 	"github.com/mipmip/hip/internal/cache"
 	"github.com/mipmip/hip/internal/clonepath"
 	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/creator"
 	"github.com/mipmip/hip/internal/provider"
 	"github.com/mipmip/hip/internal/syncer"
 )
@@ -412,5 +413,139 @@ func TestSyncCloneThenFastForward(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(target, "NEW.md")); err != nil {
 		t.Fatalf("second run did not fast-forward (NEW.md missing): %v", err)
+	}
+}
+
+type createCacheStore struct{}
+
+func (createCacheStore) AddRepo(providerName string, repo provider.Repo) error {
+	return cache.AddRepo(providerName, repo)
+}
+
+func newCreateFixtureServer(t *testing.T, owner, repo, token, remoteDir string) (*httptest.Server, func() string) {
+	t.Helper()
+	var remotePath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+token {
+			http.Error(w, "bad token", http.StatusUnauthorized)
+			return
+		}
+		if r.Method != http.MethodPost || r.URL.Path != "/orgs/"+owner+"/repos" {
+			http.NotFound(w, r)
+			return
+		}
+		var body struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			Private     bool   `json:"private"`
+			AutoInit    bool   `json:"auto_init"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if body.AutoInit {
+			t.Errorf("create request must not auto-init the remote")
+		}
+		remotePath = filepath.Join(remoteDir, repo+".git")
+		if err := os.MkdirAll(remotePath, 0o755); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		runGit(t, remoteDir, "init", "--bare", "-b", "main", remotePath)
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]any{
+			"name":           repo,
+			"description":    body.Description,
+			"private":        body.Private,
+			"owner":          map[string]string{"login": owner},
+			"ssh_url":        "file://" + remotePath,
+			"clone_url":      "file://" + remotePath,
+			"html_url":       "https://example.test/" + owner + "/" + repo,
+			"default_branch": "main",
+		})
+	}))
+	return srv, func() string { return remotePath }
+}
+
+func TestCreateRepoWizardPipeline(t *testing.T) {
+	hermeticGitEnv(t)
+	base := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("HIP_GITHUB_TOKEN", "e2e-token")
+
+	remoteDir := t.TempDir()
+	srv, remotePath := newCreateFixtureServer(t, "acme", "created", "e2e-token", remoteDir)
+	defer srv.Close()
+
+	cfg := writeConfig(t, base, srv.URL, "acme", "HIP_GITHUB_TOKEN")
+	p := &cfg.Providers[0]
+	client := provider.NewGitHub(*p, srv.Client())
+	eng := creator.NewEngine(client, createCacheStore{}, func(r provider.Repo) string {
+		return syncer.CloneURL(p, r)
+	})
+
+	res, err := eng.Create(context.Background(), creator.Request{
+		ProviderName: p.Name,
+		Options: provider.CreateRepoOptions{
+			Owner:       "acme",
+			Name:        "created",
+			Description: "created repo",
+			Visibility:  provider.VisibilityPrivate,
+		},
+		README:  "# created\n\ncreated repo\n",
+		License: "MIT License\n",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if res.Repo.Owner != "acme" || res.Repo.Name != "created" {
+		t.Fatalf("created repo = %+v", res.Repo)
+	}
+
+	remote := remotePath()
+	if remote == "" {
+		t.Fatal("fixture did not create a remote")
+	}
+	if got := strings.TrimSpace(runGit(t, remote, "log", "--format=%s", "-1")); got != "Initial commit" {
+		t.Fatalf("remote commit = %q", got)
+	}
+	files := runGit(t, remote, "ls-tree", "--name-only", "HEAD")
+	for _, want := range []string{"LICENSE", "README.md"} {
+		if !strings.Contains(files, want) {
+			t.Fatalf("remote files = %q, missing %s", files, want)
+		}
+	}
+
+	c, err := cache.Load(p.Name)
+	if err != nil {
+		t.Fatalf("load cache: %v", err)
+	}
+	var found bool
+	for _, r := range c.ReposFor("acme") {
+		if r.Name == "created" {
+			found = true
+			if r.Visibility != provider.VisibilityPrivate || r.DefaultBranch != "main" {
+				t.Fatalf("cached repo = %+v", r)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("created repo not in cache")
+	}
+
+	target, err := clonepath.RenderFor(cfg, p, p.WebURL, "acme", "created")
+	if err != nil {
+		t.Fatalf("render target: %v", err)
+	}
+	clone := syncer.NewEngine(syncer.NewExecGit(), cfg).CloneRepo(context.Background(), p, res.Repo)
+	if clone.Err != nil {
+		t.Fatalf("clone: %v", clone.Err)
+	}
+	if clone.Path != target {
+		t.Fatalf("clone target = %q, want %q", clone.Path, target)
+	}
+	if _, err := os.Stat(filepath.Join(target, "README.md")); err != nil {
+		t.Fatalf("checkout README: %v", err)
 	}
 }

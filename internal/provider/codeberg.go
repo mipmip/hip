@@ -47,6 +47,23 @@ type giteaRepo struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
+// toRepo maps a Gitea/Forgejo repository to the shared Repo model.
+func (r giteaRepo) toRepo() Repo {
+	return Repo{
+		Owner:         r.Owner.Login,
+		Name:          r.Name,
+		Description:   r.Description,
+		SSHURL:        r.SSHURL,
+		HTTPSURL:      r.CloneURL,
+		WebURL:        r.HTMLURL,
+		DefaultBranch: r.DefaultBranch,
+		Archived:      r.Archived,
+		Fork:          r.Fork,
+		Visibility:    visibilityFromPrivate(r.Private),
+		UpdatedAt:     r.UpdatedAt,
+	}
+}
+
 // NewCodeberg builds a Codeberg (Forgejo/Gitea) client. httpClient is injectable
 // for tests; a nil client uses http.DefaultClient.
 func NewCodeberg(cfg config.Provider, httpClient *http.Client) *Codeberg {
@@ -119,19 +136,7 @@ func (c *Codeberg) FetchOwner(ctx context.Context, emit fetch.Emit, owner string
 		}
 		items := make([]Repo, 0, len(repos))
 		for _, r := range repos {
-			items = append(items, Repo{
-				Owner:         r.Owner.Login,
-				Name:          r.Name,
-				Description:   r.Description,
-				SSHURL:        r.SSHURL,
-				HTTPSURL:      r.CloneURL,
-				WebURL:        r.HTMLURL,
-				DefaultBranch: r.DefaultBranch,
-				Archived:      r.Archived,
-				Fork:          r.Fork,
-				Visibility:    visibilityFromPrivate(r.Private),
-				UpdatedAt:     r.UpdatedAt,
-			})
+			items = append(items, r.toRepo())
 		}
 		out := fetch.Page[Repo]{Items: items}
 		if page == 1 {
@@ -145,6 +150,64 @@ func (c *Codeberg) FetchOwner(ctx context.Context, emit fetch.Emit, owner string
 		return nil, err
 	}
 	return FilterRepos(&c.cfg, repos), nil
+}
+
+// giteaCreateRepo is the POST repository body.
+type giteaCreateRepo struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Private     bool   `json:"private"`
+	AutoInit    bool   `json:"auto_init"`
+}
+
+// CreateRepo creates an empty repository for opts.Owner. The authenticated
+// user's repos use /user/repos; any other owner is treated as an organization.
+func (c *Codeberg) CreateRepo(ctx context.Context, opts CreateRepoOptions) (Repo, error) {
+	opts, err := normalizeCreateOptions(opts)
+	if err != nil {
+		return Repo{}, err
+	}
+	token, err := ResolveToken(&c.cfg, c.getter, c.env)
+	if err != nil {
+		return Repo{}, err
+	}
+
+	path := "/api/v1/user/repos"
+	if opts.Owner != c.cfg.Username {
+		path = fmt.Sprintf("/api/v1/orgs/%s/repos", url.PathEscape(opts.Owner))
+	}
+	body, status, err := postJSON(ctx, c.client, c.base+path, giteaCreateRepo{
+		Name:        opts.Name,
+		Description: opts.Description,
+		Private:     opts.Visibility == VisibilityPrivate,
+		AutoInit:    false,
+	}, map[string]string{
+		"Authorization": "token " + token,
+		"Accept":        "application/json",
+	})
+	if err != nil {
+		return Repo{}, err
+	}
+	if status != http.StatusCreated {
+		return Repo{}, createHTTPError("codeberg", path, status, body, createPermissionHint(config.ProviderCodeberg, opts.Visibility))
+	}
+	var r giteaRepo
+	if err := json.Unmarshal(body, &r); err != nil {
+		return Repo{}, fmt.Errorf("codeberg: decoding created repository: %w", err)
+	}
+	out := r.toRepo()
+	if out.Owner == "" {
+		out.Owner = opts.Owner
+	}
+	if out.Name == "" {
+		out.Name = opts.Name
+	}
+	if out.Description == "" {
+		out.Description = opts.Description
+	}
+	out.Visibility = opts.Visibility
+	out.DefaultBranch = defaultBranchOrMain(out.DefaultBranch)
+	return out, nil
 }
 
 // codebergTotalPages computes the total page count from the X-Total-Count header

@@ -22,6 +22,7 @@ import (
 	"github.com/mipmip/hip/internal/cache"
 	"github.com/mipmip/hip/internal/collections"
 	"github.com/mipmip/hip/internal/config"
+	"github.com/mipmip/hip/internal/creator"
 	"github.com/mipmip/hip/internal/fetch"
 	"github.com/mipmip/hip/internal/provider"
 )
@@ -183,6 +184,10 @@ type Model struct {
 	prompt *collPrompt
 	// about reports whether the about popup is open.
 	about bool
+	// wizard holds the create-repository wizard state; nil when closed.
+	wizard *wizard
+	// wizardRun executes a create request; injectable for tests.
+	wizardRun func(*config.Provider, creator.Request) (creator.Result, error)
 
 	// cursor is the highlighted row index into the currently visible list.
 	cursor int
@@ -297,6 +302,7 @@ func New(cfg *config.Config, version string) *Model {
 		mode:             cfg.DefaultMode,
 		runCommand:       runArgv,
 		checkCloned:      isGitRepo,
+		wizardRun:        defaultWizardRun,
 	}
 	for i := range cfg.Providers {
 		m.providers = append(m.providers, &cfg.Providers[i])

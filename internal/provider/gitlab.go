@@ -50,6 +50,27 @@ type glProject struct {
 	} `json:"forked_from_project"`
 }
 
+// toRepo maps a GitLab project to the shared Repo model.
+func (p glProject) toRepo() Repo {
+	ns := p.Namespace.FullPath
+	if ns == "" {
+		ns = p.Namespace.Path
+	}
+	return Repo{
+		Owner:         ns,
+		Name:          p.Path,
+		Description:   p.Description,
+		SSHURL:        p.SSHURLToRepo,
+		HTTPSURL:      p.HTTPURLToRepo,
+		WebURL:        p.WebURL,
+		DefaultBranch: p.DefaultBranch,
+		Archived:      p.Archived,
+		Fork:          p.ForkedFromProject != nil,
+		Visibility:    NormalizeVisibility(p.Visibility),
+		UpdatedAt:     p.LastActivityAt,
+	}
+}
+
 // NewGitLab builds a GitLab client. httpClient is injectable for tests; a nil
 // client uses http.DefaultClient.
 func NewGitLab(cfg config.Provider, httpClient *http.Client) *GitLab {
@@ -127,23 +148,7 @@ func (g *GitLab) FetchOwner(ctx context.Context, emit fetch.Emit, owner string) 
 		}
 		items := make([]Repo, 0, len(projects))
 		for _, p := range projects {
-			ns := p.Namespace.FullPath
-			if ns == "" {
-				ns = p.Namespace.Path
-			}
-			items = append(items, Repo{
-				Owner:         ns,
-				Name:          p.Path,
-				Description:   p.Description,
-				SSHURL:        p.SSHURLToRepo,
-				HTTPSURL:      p.HTTPURLToRepo,
-				WebURL:        p.WebURL,
-				DefaultBranch: p.DefaultBranch,
-				Archived:      p.Archived,
-				Fork:          p.ForkedFromProject != nil,
-				Visibility:    NormalizeVisibility(p.Visibility),
-				UpdatedAt:     p.LastActivityAt,
-			})
+			items = append(items, p.toRepo())
 		}
 		out := fetch.Page[Repo]{Items: items}
 		if page == 1 {
@@ -159,6 +164,96 @@ func (g *GitLab) FetchOwner(ctx context.Context, emit fetch.Emit, owner string) 
 		return nil, err
 	}
 	return FilterRepos(&g.cfg, repos), nil
+}
+
+// glNamespace is the subset of the GitLab namespace JSON used to resolve a
+// group path to its numeric id.
+type glNamespace struct {
+	ID       int    `json:"id"`
+	FullPath string `json:"full_path"`
+	Kind     string `json:"kind"`
+}
+
+// glCreateProject is the POST /projects body.
+type glCreateProject struct {
+	Name                 string `json:"name"`
+	Path                 string `json:"path"`
+	Description          string `json:"description,omitempty"`
+	Visibility           string `json:"visibility"`
+	NamespaceID          int    `json:"namespace_id,omitempty"`
+	InitializeWithReadme bool   `json:"initialize_with_readme"`
+}
+
+// CreateRepo creates an empty GitLab project for opts.Owner. Group projects
+// resolve the owner to a namespace id first; the personal namespace needs no id.
+func (g *GitLab) CreateRepo(ctx context.Context, opts CreateRepoOptions) (Repo, error) {
+	opts, err := normalizeCreateOptions(opts)
+	if err != nil {
+		return Repo{}, err
+	}
+	token, err := ResolveToken(&g.cfg, g.getter, g.env)
+	if err != nil {
+		return Repo{}, err
+	}
+
+	payload := glCreateProject{
+		Name:                 opts.Name,
+		Path:                 opts.Name,
+		Description:          opts.Description,
+		Visibility:           opts.Visibility,
+		InitializeWithReadme: false,
+	}
+	if opts.Owner != g.cfg.Username {
+		search := "/namespaces?search=" + url.QueryEscape(opts.Owner) + "&per_page=100"
+		body, status, err := g.get(ctx, search)
+		if err != nil {
+			return Repo{}, err
+		}
+		if status != http.StatusOK {
+			return Repo{}, createHTTPError("gitlab", search, status, body, createPermissionHint(config.ProviderGitLab, opts.Visibility))
+		}
+		var namespaces []glNamespace
+		if err := json.Unmarshal(body, &namespaces); err != nil {
+			return Repo{}, fmt.Errorf("gitlab: decoding namespaces: %w", err)
+		}
+		for _, ns := range namespaces {
+			if ns.FullPath == opts.Owner {
+				payload.NamespaceID = ns.ID
+				break
+			}
+		}
+		if payload.NamespaceID == 0 {
+			return Repo{}, fmt.Errorf("gitlab: namespace %q not found", opts.Owner)
+		}
+	}
+
+	body, status, err := postJSON(ctx, g.client, g.base+"/projects", payload, map[string]string{
+		"PRIVATE-TOKEN": token,
+		"Accept":        "application/json",
+	})
+	if err != nil {
+		return Repo{}, err
+	}
+	if status != http.StatusCreated {
+		return Repo{}, createHTTPError("gitlab", "/projects", status, body, createPermissionHint(config.ProviderGitLab, opts.Visibility))
+	}
+	var p glProject
+	if err := json.Unmarshal(body, &p); err != nil {
+		return Repo{}, fmt.Errorf("gitlab: decoding created project: %w", err)
+	}
+	out := p.toRepo()
+	if out.Owner == "" {
+		out.Owner = opts.Owner
+	}
+	if out.Name == "" {
+		out.Name = opts.Name
+	}
+	if out.Description == "" {
+		out.Description = opts.Description
+	}
+	out.Visibility = opts.Visibility
+	out.DefaultBranch = defaultBranchOrMain(out.DefaultBranch)
+	return out, nil
 }
 
 // glDetail mirrors the subset of the GitLab project JSON consumed for tier-2

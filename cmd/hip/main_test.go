@@ -283,6 +283,10 @@ func (f *fakeDiscoverClient) Readme(_ context.Context, _, _ string) (string, err
 	return "", nil
 }
 
+func (f *fakeDiscoverClient) CreateRepo(context.Context, provider.CreateRepoOptions) (provider.Repo, error) {
+	return provider.Repo{}, nil
+}
+
 func TestRefreshAllOwnersEagerSweep(t *testing.T) {
 	cacheHome := t.TempDir()
 	t.Setenv("XDG_CACHE_HOME", cacheHome)

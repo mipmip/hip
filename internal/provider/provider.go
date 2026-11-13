@@ -76,6 +76,15 @@ type Details struct {
 	Language string
 }
 
+// CreateRepoOptions describes a new repository. Owner is the user or
+// organization that will own it; Visibility is "public" or "private".
+type CreateRepoOptions struct {
+	Owner       string
+	Name        string
+	Description string
+	Visibility  string
+}
+
 // Provider lists repositories for a set of owners.
 type Provider interface {
 	// ListRepos returns the repositories for the given owners. An empty owners
@@ -94,6 +103,8 @@ type Provider interface {
 	// no README yields an empty string and a nil error (a clean "not found",
 	// never a hard error), so callers can degrade gracefully.
 	Readme(ctx context.Context, owner, name string) (string, error)
+	// CreateRepo creates an empty repository and returns its normalized model.
+	CreateRepo(ctx context.Context, opts CreateRepoOptions) (Repo, error)
 }
 
 // ZeroDiscoveryWarning returns a human-readable warning when all_owners is

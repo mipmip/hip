@@ -35,6 +35,9 @@ func (f *fakeDetailProvider) Readme(context.Context, string, string) (string, er
 	f.readmeCalls++
 	return f.readme, f.readmeErr
 }
+func (f *fakeDetailProvider) CreateRepo(context.Context, provider.CreateRepoOptions) (provider.Repo, error) {
+	return provider.Repo{}, nil
+}
 
 func TestDetailFetcherConcurrentAndReadmeFailNonFatal(t *testing.T) {
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())

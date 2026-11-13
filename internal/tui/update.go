@@ -59,6 +59,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case wizardEditorDoneMsg:
+		return m.finishREADME(msg)
+
+	case wizardCreatedMsg:
+		return m.handleWizardCreated(msg)
+
 	case bulkDoneMsg:
 		ok := 0
 		for _, r := range msg.Results {
@@ -279,6 +285,11 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handlePromptKey(msg)
 	}
 
+	// New-repository wizard owns every key while open.
+	if m.wizard != nil {
+		return m.handleWizardKey(msg)
+	}
+
 	// About popup: `?` or Esc closes it; every other key is swallowed.
 	if m.about {
 		if msg.Type == tea.KeyEsc || msg.String() == "?" {
@@ -412,6 +423,9 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "c":
 		return m.clone()
+
+	case "n":
+		return m.newRepo()
 
 	case "o":
 		return m.open()

@@ -23,6 +23,9 @@ func (f *fakeOwnerFetcher) RepoDetails(context.Context, string, string) (provide
 	return provider.Details{}, nil
 }
 func (f *fakeOwnerFetcher) Readme(context.Context, string, string) (string, error) { return "", nil }
+func (f *fakeOwnerFetcher) CreateRepo(context.Context, provider.CreateRepoOptions) (provider.Repo, error) {
+	return provider.Repo{}, nil
+}
 func (f *fakeOwnerFetcher) FetchOwner(_ context.Context, emit fetch.Emit, owner string) ([]provider.Repo, error) {
 	emit.Started("test", owner)
 	emit.Done("test", owner, len(f.repos)) // inner Done — must be suppressed by the wrapper

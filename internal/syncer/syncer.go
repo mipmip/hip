@@ -147,7 +147,7 @@ func (e *Engine) CloneRepo(ctx context.Context, p *config.Provider, r provider.R
 		return res
 	}
 
-	url := cloneURL(p, r)
+	url := CloneURL(p, r)
 	if url == "" {
 		res.Action = ActionFailed
 		res.Err = fmt.Errorf("no %s clone URL for %s/%s", p.CloneProtocol, r.Owner, r.Name)
@@ -188,7 +188,7 @@ func (e *Engine) CloneRepoProgress(ctx context.Context, p *config.Provider, r pr
 		return res
 	}
 
-	url := cloneURL(p, r)
+	url := CloneURL(p, r)
 	if url == "" {
 		res.Action = ActionFailed
 		res.Err = fmt.Errorf("no %s clone URL for %s/%s", p.CloneProtocol, r.Owner, r.Name)
@@ -226,9 +226,9 @@ func (e *Engine) SyncProvider(ctx context.Context, p *config.Provider, repos []p
 	return sum
 }
 
-// cloneURL returns the clone URL for repo under provider p based on the
+// CloneURL returns the clone URL for repo under provider p based on the
 // configured clone protocol.
-func cloneURL(p *config.Provider, r provider.Repo) string {
+func CloneURL(p *config.Provider, r provider.Repo) string {
 	if p.CloneProtocol == config.ProtocolHTTPS {
 		return r.HTTPSURL
 	}
@@ -249,7 +249,7 @@ func (e *Engine) syncRepo(ctx context.Context, p *config.Provider, r provider.Re
 
 	// Clone when there is no repository at the target yet.
 	if !e.Git.IsRepo(target) {
-		url := cloneURL(p, r)
+		url := CloneURL(p, r)
 		if url == "" {
 			res.Action = ActionFailed
 			res.Err = fmt.Errorf("no %s clone URL for %s/%s", p.CloneProtocol, r.Owner, r.Name)
